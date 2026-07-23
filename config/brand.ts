@@ -1,71 +1,71 @@
 /**
- * Identidade whitelabel do restaurante.
+ * Identidade whitelabel da LOJA (ecommerce).
  * Para cada cliente novo: editar este ficheiro + .env + assets em /public/assets.
  * NUNCA espalhar identidade de marca pelo código — tudo aqui.
+ *
+ * Este é o brand DEMO do Ecommerce-Padrão (boutique de moda & perfumaria).
  */
 
 export const brand = {
-  name: 'THE BOX',
-  tagline: 'Sabores que viciam',
+  name: 'LUMA',
+  tagline: 'Moda & Perfumaria',
   locale: 'pt-MZ' as const,
   currency: 'MZN' as const,
 
-  // Redes sociais (opcional)
+  // Redes sociais (opcional — deixar '' esconde o ícone)
   social: {
     instagram: '',
     facebook: '',
     whatsapp: '',
   },
 
-  // Tema — tokens CSS mapeados para Tailwind via globals.css
-  // Editar para mudar cores do cliente (overrides os defaults HawSmash)
+  // Tema do PAINEL (admin) — tokens CSS mapeados para Tailwind via globals.css.
+  // Mantido escuro/neutro; a loja pública usa o bloco `storefront` abaixo.
   theme: {
-    gold: '#e5a93c',
-    goldDeep: '#c48a1e',
-    ember: '#e85a2a',
-    bg0: '#0a0807',
-    bg1: '#111110',
-    bg2: '#1a1816',
-    bg3: '#221f1c',
-    ink: '#f6f1e6',
-    inkDim: '#c8bfb0',
+    gold: '#b08d57',
+    goldDeep: '#8a6d3f',
+    ember: '#c98a5e',
+    bg0: '#0c0c0d',
+    bg1: '#141416',
+    bg2: '#1c1c1f',
+    bg3: '#242428',
+    ink: '#f4f2ee',
+    inkDim: '#c7c3bb',
     inkMute: '#847e72',
-    fontDisplay: "'Bebas Neue', 'Anton', Impact, sans-serif",
-    fontBody: "'DM Sans', 'Inter', system-ui, sans-serif",
+    fontDisplay: "'Playfair Display', 'Georgia', serif",
+    fontBody: "'Plus Jakarta Sans', 'Inter', system-ui, sans-serif",
     fontMono: "'JetBrains Mono', ui-monospace, monospace",
     radiusSm: '6px',
     radiusMd: '10px',
     radiusLg: '18px',
   },
 
-  // ── Loja do cliente (storefront "The Box") — whitelabel via CSS vars ──────────
-  // Editar isto (+ assets em public/assets/<brand>/) troca a loja inteira de empresa.
+  // ── Loja do cliente (storefront) — whitelabel via CSS vars ────────────────────
+  // Registro visual de ecommerce de moda: claro, elegante, muito respiro.
   // Os componentes leem var(--st-*) injetadas em apps/web/app/(public)/layout.tsx.
   storefront: {
-    logoText: 'THE BOX',
-    bg: '#0d0d0d',
-    card: '#1a1a1a',
-    line: 'rgba(255,255,255,0.09)',
-    primary: '#e8174d',
-    primary2: '#ff5f30',
-    grad: 'linear-gradient(135deg,#e8174d 0%,#ff5f30 100%)',
-    star: '#f59e0b',
-    text: '#ffffff',
-    muted: '#888888',
-    muted2: '#bbbbbb',
+    logoText: 'LUMA',
+    bg: '#ffffff',
+    card: '#ffffff',
+    line: 'rgba(20,20,20,0.10)',
+    primary: '#141414',
+    primary2: '#b08d57',
+    grad: 'linear-gradient(135deg,#141414 0%,#3a3a3a 100%)',
+    star: '#b08d57',
+    text: '#141414',
+    muted: '#8a8a8a',
+    muted2: '#5c5c5c',
     font: "'Plus Jakarta Sans', sans-serif",
     hero: {
-      image: '/assets/thebox/hero.png',
-      title: 'SABORES QUE VICIAM!',
-      subtitle: 'Comida de verdade, feita para matar a fome!',
-      cta: 'PEDIR AGORA',
+      image: '/assets/luma/hero.png',
+      title: 'Nova Coleção',
+      subtitle: 'Peças e fragrâncias selecionadas para a estação.',
+      cta: 'Ver Coleção',
     },
-    // fotos de fallback quando um item do cardápio não tem photo_url
+    // fotos de fallback quando um produto não tem photo_url
     fallbackImages: [
-      '/assets/thebox/00.png', '/assets/thebox/img1.png', '/assets/thebox/2.png',
-      '/assets/thebox/3.png', '/assets/thebox/4.png', '/assets/thebox/5.png',
-      '/assets/thebox/6.png', '/assets/thebox/7.png', '/assets/thebox/8.png',
-      '/assets/thebox/9.png', '/assets/thebox/11.png', '/assets/thebox/12.png',
+      '/assets/luma/00.png', '/assets/luma/01.png', '/assets/luma/02.png',
+      '/assets/luma/03.png', '/assets/luma/04.png', '/assets/luma/05.png',
     ],
   },
 } as const;
