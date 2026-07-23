@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { margin: 0; padding: 0; background: #111; }
+    ::-webkit-scrollbar { display: none; }
+  </style>
+</helmet>
+
+<div style="display:flex; align-items:center; justify-content:center; min-height:100vh; background:#111; padding:40px 24px">
+  <x-import component="IOSDevice" from="./ios-frame.jsx" dark="{{ isDark }}" hint-size="393px,852px">
+    <div style="width:100%; height:100%; display:flex; flex-direction:column; overflow:hidden; background:#0d0d0d; font-family:'Plus Jakarta Sans',sans-serif; padding-top:62px">
+      {{ screenContent }}
+    </div>
+  </x-import>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:420,&quot;height&quot;:900}}">
+class Component extends DCLogic {
+  state = {
+    screen: 'home',
+    selectedSize: 'medium',
+    selectedAddons: [],
+    quantity: 1,
+    ordersTab: 'ativos',
+    favorites: new Set([1, 3]),
+    cartQtys: { 1: 1, 2: 1, 3: 2 },
+  };
+
+  nav(screen) { this.setState({ screen }); }
+  back() {
+    const prev = { product: 'home', cart: 'home', orders: 'home' };
+    this.setState({ screen: prev[this.state.screen] || 'home' });
+  }
+
+  renderVals() {
+    const { screen, selectedSize, selectedAddons, quantity, ordersTab, favorites, cartQtys } = this.state;
+    const R = React.createElement;
+
+    const BG     = '#0d0d0d';
+    const CARD   = '#1a1a1a';
+    const BORDER = 'rgba(255,255,255,0.09)';
+    const RED    = '#e8174d';
+    const GRAD   = 'linear-gradient(135deg,#e8174d 0%,#ff5f30 100%)';
+    const WHITE  = '#fff';
+    const GRAY   = '#888';
+    const GRAY2  = '#bbb';
+    const STAR   = '#f59e0b';
+    const F      = "'Plus Jakarta Sans',sans-serif";
+
+    const fmt = n => n.toLocaleString('pt-BR');
+
+    // Food images from Unsplash
+    const IMGS = {
+      meltbox:  'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400&h=300&fit=crop&auto=format',
+      pollo:    'https://images.unsplash.com/photo-1587593810167-a84920ea0781?w=400&h=300&fit=crop&auto=format',
+      texmex:   'https://images.unsplash.com/photo-1552332386-f8dd00dc2f85?w=400&h=300&fit=crop&auto=format',
+      queenchk: 'https://images.unsplash.com/photo-1506354666786-959d6d497f1a?w=400&h=300&fit=crop&auto=format',
+      crispy:   'https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=400&h=300&fit=crop&auto=format',
+      veggie:   'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=400&h=300&fit=crop&auto=format',
+      double:   'https://images.unsplash.com/photo-1571091718767-18b5b1457add?w=400&h=300&fit=crop&auto=format',
+      hero:     'uploads/pasted-1781554948218-0.png',
+    };
+
+    const CART_ITEMS = [
+      { id: 1, name: 'Melt Box',        variant: 'Médio', price: 350, img: IMGS.meltbox },
+      { id: 2, name: 'Pollo Loco',      variant: 'Médio', price: 320, img: IMGS.pollo },
+      { id: 3, name: 'Tex-Mex Chicken', variant: 'Médio', price: 370, img: IMGS.texmex },
+    ];
+    const subtotal = CART_ITEMS.reduce((s, it) => s + it.price * (cartQtys[it.id] || 1), 0);
+    const total = subtotal + 100;
+
+    // Bottom Nav
+    const NAV_ITEMS = [
+      { id: 'home',   label: 'Início',
+        path: 'M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z' },
+      { id: 'menu',   label: 'Cardápio',
+        path: 'M4 6h16M4 12h16M4 18h10' },
+      { id: 'orders', label: 'Pedidos',
+        path: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2' },
+      { id: 'perfil', label: 'Perfil',
+        path: 'M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 11a4 4 0 100-8 4 4 0 000 8z' },
+    ];
+    const activeNavMap = { home: 'home', product: 'home', cart: 'orders', orders: 'perfil' };
+    const activeNav = activeNavMap[screen];
+
+    const BottomNav = R('div', {
+      style: { flexShrink: 0, background: '#0f0f0f', borderTop: `1px solid ${BORDER}`, display: 'flex', paddingBottom: 20 }
+    },
+      NAV_ITEMS.map(({ id, label, path }) => {
+        const active = id === activeNav;
+        return R('div', {
+          key: id,
+          onClick: () => {
+            if (id === 'home') this.nav('home');
+            else if (id === 'orders') this.nav('cart');
+            else if (id === 'perfil') this.nav('orders');
+          },
+          style: { flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '10px 0 6px', cursor: 'pointer' },
+        }, [
+          R('svg', { key: 'i', width: 22, height: 22, viewBox: '0 0 24 24', fill: 'none', stroke: active ? RED : '#555', strokeWidth: 1.8, strokeLinecap: 'round', strokeLinejoin: 'round' },
+            R('path', { d: path })),
+          R('span', { key: 'l', style: { fontSize: 10, fontFamily: F, fontWeight: active ? 700 : 400, color: active ? RED : '#555' } }, label),
+        ]);
+      })
+    );
+
+    // Food card thumbnail
+    const FoodThumb = ({ img, name, sub, id, wide, price, rating }) =>
+      R('div', {
+        onClick: () => this.nav('product'),
+        style: { background: CARD, borderRadius: 14, width: wide ? 136 : 118, flexShrink: 0, overflow: 'hidden', border: `1px solid ${BORDER}`, cursor: 'pointer' },
+      }, [
+        R('div', { key: 'img', style: { height: wide ? 100 : 90, position: 'relative', overflow: 'hidden' } }, [
+          R('img', { key: 'ph', src: img, alt: name, style: { width: '100%', height: '100%', objectFit: 'cover', display: 'block' } }),
+          R('div', { key: 'ov', style: { position: 'absolute', inset: 0, background: 'linear-gradient(180deg, transparent 40%, rgba(0,0,0,0.55) 100%)' } }),
+          R('div', {
+            key: 'h',
+            onClick: e => {
+              e.stopPropagation();
+              this.setState(s => {
+                const f = new Set(s.favorites);
+                f.has(id) ? f.delete(id) : f.add(id);
+                return { favorites: f };
+              });
+            },
+            style: { position: 'absolute', top: 7, right: 7, background: 'rgba(0,0,0,0.45)', borderRadius: '50%', width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: favorites.has(id) ? RED : '#aaa', fontSize: 13 }
+          }, favorites.has(id) ? '♥' : '♡'),
+        ]),
+        R('div', { key: 'inf', style: { padding: '8px 10px 10px' } }, [
+          R('div', { key: 'n', style: { fontFamily: F, fontWeight: 700, fontSize: 12, color: WHITE, marginBottom: 1 } }, name),
+          R('div', { key: 's', style: { fontFamily: F, fontSize: 10.5, color: GRAY } }, sub),
+          wide && rating ? R('div', { key: 'r', style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 5 } }, [
+            R('span', { key: 'st', style: { fontSize: 10.5, color: STAR, fontFamily: F, fontWeight: 600 } }, `⭐ ${rating}`),
+            R('span', { key: 'pr', style: { fontSize: 11.5, color: WHITE, fontFamily: F, fontWeight: 700 } }, `${price} MT`),
+          ]) : null,
+        ]),
+      ]);
+
+    const SecHead = (title) =>
+      R('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 20px', marginBottom: 12 } }, [
+        R('span', { key: 't', style: { fontFamily: F, fontWeight: 700, fontSize: 16, color: WHITE } }, title),
+        R('span', { key: 'm', style: { fontFamily: F, fontSize: 11.5, color: GRAY, cursor: 'pointer' } }, 'Ver todos ›'),
+      ]);
+
+    // ══════════════════════════════════════
+    // HOME
+    // ══════════════════════════════════════
+    const FAV_ITEMS = [
+      { id: 1, name: 'Melt Box',         sub: 'Clássico', img: IMGS.meltbox },
+      { id: 2, name: 'Pollo Loco',       sub: 'Favorito', img: IMGS.pollo },
+      { id: 3, name: "Queen Chick'n Box", sub: 'Picante',  img: IMGS.queenchk },
+    ];
+    const POP_ITEMS = [
+      { id: 1, name: 'Melt Box',         sub: 'Médio', price: 350, rating: 4.8, img: IMGS.meltbox, wide: true },
+      { id: 4, name: 'Tex-Mex Chicken',  sub: 'Médio', price: 370, rating: 4.7, img: IMGS.texmex,  wide: true },
+      { id: 2, name: 'Pollo Loco',       sub: 'Médio', price: 320, rating: 4.9, img: IMGS.pollo,   wide: true },
+    ];
+    const NEW_ITEMS = [
+      { id: 10, name: 'Crispy Box',   sub: 'Novo',    img: IMGS.crispy },
+      { id: 11, name: 'Veggie Box',   sub: 'Vegano',  img: IMGS.veggie },
+      { id: 12, name: 'Double Stack', sub: 'Premium', img: IMGS.double },
+    ];
+
+    const HomeScreen = R('div', { style: { flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', background: BG } }, [
+      // Header
+      R('div', { key: 'hdr', style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 20px 10px' } }, [
+        R('div', { key: 'logo', style: { border: '2.5px solid #fff', borderRadius: 5, padding: '4px 10px', fontFamily: F, fontWeight: 900, fontSize: 14, color: WHITE, letterSpacing: 2, whiteSpace: 'nowrap' } }, 'THE BOX'),
+        R('div', { key: 'icons', style: { display: 'flex', gap: 10, alignItems: 'center' } }, [
+          R('div', { key: 'hrt', style: { position: 'relative' } }, [
+            R('div', { key: 'c', style: { width: 36, height: 36, borderRadius: '50%', background: 'rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: RED, fontSize: 17, cursor: 'pointer' } }, '♥'),
+            R('div', { key: 'b', style: { position: 'absolute', top: -2, right: -2, background: RED, borderRadius: '50%', width: 16, height: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 8, fontWeight: 800, color: WHITE, fontFamily: F } }, '3'),
+          ]),
+          R('div', { key: 'bell', style: { width: 36, height: 36, borderRadius: '50%', background: 'rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: 16 } }, '🔔'),
+        ]),
+      ]),
+
+      // Hero banner
+      R('div', { key: 'hero', onClick: () => this.nav('product'), style: { margin: '0 0 18px', borderRadius: 0, overflow: 'hidden', height: 420, position: 'relative', cursor: 'pointer', flexShrink: 0 } }, [
+        R('img', { key: 'bg', src: IMGS.hero, alt: 'hero', style: { width: '100%', height: '100%', objectFit: 'cover', display: 'block' } }),
+        R('div', { key: 'ov', style: { position: 'absolute', inset: 0, background: 'linear-gradient(120deg, rgba(10,5,2,0.85) 0%, rgba(20,10,5,0.6) 55%, rgba(10,5,2,0.3) 100%)' } }),
+        // THE BOX watermark on food
+        R('div', { key: 'wm', style: { position: 'absolute', right: 22, bottom: 44, background: 'rgba(255,255,255,0.15)', border: '1.5px solid rgba(255,255,255,0.3)', borderRadius: 5, padding: '2px 8px', fontFamily: F, fontWeight: 900, fontSize: 9, color: WHITE, letterSpacing: 1.5, whiteSpace: 'nowrap' } }, 'THE BOX'),
+        R('div', { key: 'txt', style: { position: 'absolute', bottom: 0, left: 0, padding: '0 18px 18px' } }, [
+          R('div', { key: 'h', style: { fontFamily: F, fontWeight: 900, fontSize: 26, color: WHITE, lineHeight: 1.1, marginBottom: 5, maxWidth: 185, textWrap: 'balance' } }, 'SABORES QUE EXPLODEM!'),
+          R('div', { key: 's', style: { fontFamily: F, fontSize: 11, color: 'rgba(255,255,255,0.7)', marginBottom: 13, maxWidth: 170 } }, 'Comida de verdade, feita\npara matar a fome!'),
+          R('button', { key: 'btn', onClick: e => { e.stopPropagation(); this.nav('product'); }, style: { background: WHITE, color: '#111', border: 'none', borderRadius: 8, padding: '7px 14px', fontFamily: F, fontWeight: 800, fontSize: 11, cursor: 'pointer', letterSpacing: 0.8, whiteSpace: 'nowrap' } }, 'PEDIR AGORA'),
+        ]),
+      ]),
+
+      // Favoritos
+      R('div', { key: 'fav', style: { marginBottom: 18 } }, [
+        SecHead('Favoritos'),
+        R('div', { key: 'cards', style: { display: 'flex', gap: 10, overflowX: 'auto', paddingLeft: 20, paddingRight: 8 } },
+          FAV_ITEMS.map(it => R(FoodThumb, { key: it.id, ...it }))),
+      ]),
+
+      // Mais pedidos
+      R('div', { key: 'pop', style: { marginBottom: 18 } }, [
+        SecHead('Mais pedidos'),
+        R('div', { key: 'cards', style: { display: 'flex', gap: 10, overflowX: 'auto', paddingLeft: 20, paddingRight: 8 } },
+          POP_ITEMS.map(it => R(FoodThumb, { key: it.id, ...it }))),
+      ]),
+
+      // Novidades
+      R('div', { key: 'new', style: { marginBottom: 10 } }, [
+        SecHead('Novidades'),
+        R('div', { key: 'cards', style: { display: 'flex', gap: 10, overflowX: 'auto', paddingLeft: 20, paddingRight: 8 } },
+          NEW_ITEMS.map(it => R(FoodThumb, { key: it.id, ...it }))),
+      ]),
+
+      R('div', { key: 'sp', style: { height: 4 } }),
+      BottomNav,
+    ]);
+
+    // ══════════════════════════════════════
+    // PRODUCT DETAIL
+    // ══════════════════════════════════════
+    const SIZES = [
+      { id: 'small',  label: 'Pequeno', price: 250 },
+      { id: 'medium', label: 'Médio',   price: 350 },
+      { id: 'large',  label: 'Grande',  price: 450 },
+    ];
+    const ADDONS = [
+      { id: 'bacon',  label: 'Bacon',    price: '+50' },
+      { id: 'queijo', label: 'Queijo',   price: '+30' },
+      { id: 'ovo',    label: 'Ovo',      price: '+30' },
+      { id: 'jalap',  label: 'Jalapeño', price: '+20' },
+    ];
+    const curPrice = (SIZES.find(s => s.id === selectedSize) || SIZES[1]).price;
+
+    const ProductScreen = R('div', { style: { flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: BG } }, [
+      // Hero image
+      R('div', { key: 'hero', style: { height: 265, flexShrink: 0, position: 'relative', overflow: 'hidden' } }, [
+        R('img', { key: 'img', src: IMGS.meltbox, alt: 'Melt Box', style: { width: '100%', height: '100%', objectFit: 'cover', display: 'block' } }),
+        R('div', { key: 'ov', style: { position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(0,0,0,0.25) 0%, rgba(0,0,0,0) 40%, rgba(10,5,2,0.7) 100%)' } }),
+        R('div', { key: 'wm', style: { position: 'absolute', bottom: 18, right: 22, background: 'rgba(255,255,255,0.15)', border: '1.5px solid rgba(255,255,255,0.3)', borderRadius: 5, padding: '2px 8px', fontFamily: F, fontWeight: 900, fontSize: 9, color: WHITE, letterSpacing: 1.5, whiteSpace: 'nowrap' } }, 'THE BOX'),
+        R('button', { key: 'back', onClick: () => this.back(), style: { position: 'absolute', top: 12, left: 14, background: 'rgba(0,0,0,0.5)', border: 'none', borderRadius: '50%', width: 38, height: 38, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: WHITE, fontSize: 20 } }, '‹'),
+        R('button', { key: 'hrt', style: { position: 'absolute', top: 12, right: 14, background: 'rgba(0,0,0,0.5)', border: 'none', borderRadius: '50%', width: 38, height: 38, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#aaa', fontSize: 17 } }, '♡'),
+      ]),
+
+      // Content
+      R('div', { key: 'scroll', style: { flex: 1, overflowY: 'auto', padding: '18px 20px 0' } }, [
+        R('h2', { key: 'name', style: { fontFamily: F, fontWeight: 900, fontSize: 28, color: WHITE, margin: '0 0 8px' } }, 'Melt Box'),
+        R('div', { key: 'badge', style: { display: 'inline-flex', alignItems: 'center', gap: 5, background: 'rgba(255,95,48,0.13)', border: '1px solid rgba(255,95,48,0.3)', borderRadius: 20, padding: '3px 11px', marginBottom: 9 } }, [
+          R('span', { key: 'f', style: { fontSize: 12 } }, '🔥'),
+          R('span', { key: 't', style: { fontFamily: F, fontSize: 11.5, fontWeight: 700, color: '#ff6535' } }, 'Clássico'),
+        ]),
+        R('div', { key: 'rat', style: { display: 'flex', alignItems: 'center', gap: 5, marginBottom: 9 } }, [
+          R('span', { key: 's', style: { fontSize: 13, color: STAR } }, '⭐'),
+          R('span', { key: 'v', style: { fontFamily: F, fontSize: 13, fontWeight: 700, color: WHITE } }, '4.8'),
+          R('span', { key: 'c', style: { fontFamily: F, fontSize: 12, color: GRAY } }, '(256 avaliações)'),
+        ]),
+        R('p', { key: 'desc', style: { fontFamily: F, fontSize: 13, color: GRAY2, lineHeight: 1.55, margin: '0 0 14px' } }, 'Carne moída, batata frita, molho da casa, queijo derretido e bacon.'),
+        R('div', { key: 'price', style: { display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 18 } }, [
+          R('span', { key: 'v', style: { fontFamily: F, fontWeight: 900, fontSize: 36, color: WHITE } }, String(curPrice)),
+          R('span', { key: 'u', style: { fontFamily: F, fontWeight: 600, fontSize: 16, color: GRAY } }, 'MT'),
+        ]),
+
+        // Tamanho
+        R('div', { key: 'sizes', style: { marginBottom: 18 } }, [
+          R('div', { key: 'lbl', style: { fontFamily: F, fontWeight: 700, fontSize: 14, color: WHITE, marginBottom: 10 } }, 'Escolha o tamanho'),
+          R('div', { key: 'opts', style: { display: 'flex', gap: 8 } },
+            SIZES.map(opt =>
+              R('button', {
+                key: opt.id,
+                onClick: () => this.setState({ selectedSize: opt.id }),
+                style: {
+                  flex: 1, background: selectedSize === opt.id ? '#1e1e1e' : 'transparent',
+                  border: `1.5px solid ${selectedSize === opt.id ? RED : BORDER}`,
+                  borderRadius: 12, padding: '10px 4px', cursor: 'pointer',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+                },
+              }, [
+                R('span', { key: 'l', style: { fontFamily: F, fontWeight: selectedSize === opt.id ? 700 : 500, fontSize: 12, color: WHITE } }, opt.label),
+                R('span', { key: 'p', style: { fontFamily: F, fontWeight: 600, fontSize: 11, color: selectedSize === opt.id ? GRAY2 : GRAY } }, `${opt.price} MT`),
+              ])
+            )
+          ),
+        ]),
+
+        // Adicionais
+        R('div', { key: 'adds', style: { marginBottom: 16 } }, [
+          R('div', { key: 'lbl', style: { fontFamily: F, fontWeight: 700, fontSize: 14, color: WHITE, marginBottom: 10 } }, 'Adicionais'),
+          R('div', { key: 'opts', style: { display: 'flex', flexWrap: 'wrap', gap: 8 } },
+            ADDONS.map(opt => {
+              const sel = selectedAddons.includes(opt.id);
+              return R('button', {
+                key: opt.id,
+                onClick: () => this.setState(s => ({
+                  selectedAddons: s.selectedAddons.includes(opt.id)
+                    ? s.selectedAddons.filter(x => x !== opt.id)
+                    : [...s.selectedAddons, opt.id]
+                })),
+                style: {
+                  background: sel ? 'rgba(232,23,77,0.12)' : 'transparent',
+                  border: `1.5px solid ${sel ? RED : BORDER}`,
+                  borderRadius: 10, padding: '8px 14px', cursor: 'pointer',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1,
+                },
+              }, [
+                R('span', { key: 'l', style: { fontFamily: F, fontWeight: 600, fontSize: 12, color: WHITE } }, opt.label),
+                R('span', { key: 'p', style: { fontFamily: F, fontSize: 10, color: sel ? RED : GRAY } }, `${opt.price} MT`),
+              ]);
+            })
+          ),
+        ]),
+        R('div', { key: 'sp', style: { height: 4 } }),
+      ]),
+
+      // Add to cart bar
+      R('div', { key: 'bar', style: { flexShrink: 0, padding: '10px 16px 14px', background: BG, borderTop: `1px solid ${BORDER}`, display: 'flex', gap: 10, alignItems: 'center' } }, [
+        R('div', { key: 'qty', style: { display: 'flex', alignItems: 'center', background: CARD, borderRadius: 12, border: `1px solid ${BORDER}`, overflow: 'hidden' } }, [
+          R('button', { key: '-', onClick: () => this.setState(s => ({ quantity: Math.max(1, s.quantity - 1) })), style: { background: 'none', border: 'none', color: WHITE, fontSize: 22, cursor: 'pointer', width: 40, height: 46, display: 'flex', alignItems: 'center', justifyContent: 'center' } }, '−'),
+          R('span', { key: 'v', style: { fontFamily: F, fontWeight: 800, fontSize: 16, color: WHITE, width: 26, textAlign: 'center' } }, String(quantity)),
+          R('button', { key: '+', onClick: () => this.setState(s => ({ quantity: s.quantity + 1 })), style: { background: 'none', border: 'none', color: WHITE, fontSize: 22, cursor: 'pointer', width: 40, height: 46, display: 'flex', alignItems: 'center', justifyContent: 'center' } }, '+'),
+        ]),
+        R('button', { key: 'add', onClick: () => this.nav('cart'), style: { flex: 1, height: 46, background: GRAD, border: 'none', borderRadius: 12, fontFamily: F, fontWeight: 800, fontSize: 12.5, color: WHITE, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, letterSpacing: 0.5 } }, [
+          'ADICIONAR AO CARRINHO ',
+          R('span', { key: 'i', style: { fontSize: 16 } }, '🛒'),
+        ]),
+      ]),
+    ]);
+
+    // ══════════════════════════════════════
+    // CART
+    // ══════════════════════════════════════
+    const CartScreen = R('div', { style: { flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: BG } }, [
+      R('div', { key: 'hdr', style: { flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 20px 10px' } }, [
+        R('div', { key: 'l', style: { display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }, onClick: () => this.back() }, [
+          R('span', { key: 'a', style: { fontSize: 22, color: WHITE, lineHeight: 1 } }, '←'),
+          R('span', { key: 't', style: { fontFamily: F, fontWeight: 800, fontSize: 20, color: WHITE } }, 'Meu Carrinho'),
+        ]),
+        R('span', { key: 'clr', style: { fontFamily: F, fontSize: 13, color: RED, cursor: 'pointer', fontWeight: 600 } }, 'Limpar'),
+      ]),
+
+      R('div', { key: 'scroll', style: { flex: 1, overflowY: 'auto' } }, [
+        // Delivery address
+        R('div', { key: 'addr', style: { margin: '0 16px 12px', padding: '11px 15px', background: CARD, borderRadius: 14, border: `1px solid ${BORDER}` } }, [
+          R('div', { key: 'lbl', style: { fontFamily: F, fontSize: 11, color: GRAY, marginBottom: 3 } }, 'Entrega em'),
+          R('div', { key: 'row', style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } }, [
+            R('span', { key: 'a', style: { fontFamily: F, fontWeight: 700, fontSize: 14, color: WHITE } }, 'Maputo, Polana ▾'),
+            R('span', { key: 'c', style: { fontFamily: F, fontSize: 12.5, color: RED, fontWeight: 700, cursor: 'pointer' } }, 'Alterar'),
+          ]),
+        ]),
+
+        // Items
+        R('div', { key: 'items', style: { padding: '0 16px', display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 12 } },
+          CART_ITEMS.map(it =>
+            R('div', { key: it.id, style: { background: CARD, borderRadius: 14, border: `1px solid ${BORDER}`, padding: '12px', display: 'flex', alignItems: 'center', gap: 12 } }, [
+              R('div', { key: 'th', style: { width: 58, height: 58, borderRadius: 10, overflow: 'hidden', flexShrink: 0 } },
+                R('img', { src: it.img, alt: it.name, style: { width: '100%', height: '100%', objectFit: 'cover' } })
+              ),
+              R('div', { key: 'inf', style: { flex: 1 } }, [
+                R('div', { key: 'n', style: { fontFamily: F, fontWeight: 700, fontSize: 14, color: WHITE, marginBottom: 2 } }, it.name),
+                R('div', { key: 'v', style: { fontFamily: F, fontSize: 12, color: GRAY, marginBottom: 8 } }, it.variant),
+                R('div', { key: 'ctrl', style: { display: 'flex', alignItems: 'center', gap: 8 } }, [
+                  R('div', { key: 'q', style: { display: 'flex', alignItems: 'center', background: '#111', borderRadius: 8, overflow: 'hidden' } }, [
+                    R('button', { key: '-', onClick: () => this.setState(s => ({ cartQtys: { ...s.cartQtys, [it.id]: Math.max(1, (s.cartQtys[it.id] || 1) - 1) } })), style: { background: 'none', border: 'none', color: WHITE, fontSize: 18, cursor: 'pointer', width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center' } }, '−'),
+                    R('span', { key: 'v', style: { fontFamily: F, fontWeight: 700, fontSize: 13, color: WHITE, minWidth: 20, textAlign: 'center' } }, String(cartQtys[it.id] || 1)),
+                    R('button', { key: '+', onClick: () => this.setState(s => ({ cartQtys: { ...s.cartQtys, [it.id]: (s.cartQtys[it.id] || 1) + 1 } })), style: { background: 'none', border: 'none', color: WHITE, fontSize: 18, cursor: 'pointer', width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center' } }, '+'),
+                  ]),
+                ]),
+              ]),
+              R('div', { key: 'p', style: { fontFamily: F, fontWeight: 800, fontSize: 14, color: WHITE, flexShrink: 0 } }, `${fmt(it.price * (cartQtys[it.id] || 1))} MT`),
+            ])
+          )
+        ),
+
+        // Summary
+        R('div', { key: 'sum', style: { margin: '0 16px 16px', padding: '14px 16px', background: CARD, borderRadius: 14, border: `1px solid ${BORDER}` } }, [
+          R('div', { key: 'ttl', style: { fontFamily: F, fontWeight: 700, fontSize: 14.5, color: WHITE, marginBottom: 12 } }, 'Resumo do pedido'),
+          ...[
+            { label: 'Subtotal', val: `${fmt(subtotal)} MT`, bold: false },
+            { label: 'Entrega',  val: '100 MT',              bold: false },
+            { label: 'Total',    val: `${fmt(total)} MT`,    bold: true },
+          ].map(row =>
+            R('div', { key: row.label, style: { display: 'flex', justifyContent: 'space-between', marginBottom: row.bold ? 0 : 8, paddingTop: row.bold ? 11 : 0, borderTop: row.bold ? `1px solid ${BORDER}` : 'none' } }, [
+              R('span', { key: 'l', style: { fontFamily: F, fontSize: row.bold ? 15 : 13, fontWeight: row.bold ? 800 : 400, color: row.bold ? WHITE : GRAY } }, row.label),
+              R('span', { key: 'v', style: { fontFamily: F, fontSize: row.bold ? 16 : 13, fontWeight: row.bold ? 900 : 400, color: WHITE } }, row.val),
+            ])
+          ),
+        ]),
+      ]),
+
+      R('div', { key: 'fin', style: { flexShrink: 0, padding: '8px 16px 12px', background: BG, borderTop: `1px solid ${BORDER}` } },
+        R('button', { onClick: () => this.nav('orders'), style: { width: '100%', height: 52, background: GRAD, border: 'none', borderRadius: 14, fontFamily: F, fontWeight: 900, fontSize: 14, color: WHITE, cursor: 'pointer', letterSpacing: 1 } }, 'FINALIZAR PEDIDO')
+      ),
+      BottomNav,
+    ]);
+
+    // ══════════════════════════════════════
+    // ORDERS
+    // ══════════════════════════════════════
+    const PROGRESS_STEPS = [
+      { id: 'rec',  label: 'Recebido',   done: true,  active: false },
+      { id: 'pre',  label: 'Em preparo', done: false, active: true  },
+      { id: 'cam',  label: 'A caminho',  done: false, active: false },
+      { id: 'ent',  label: 'Entregue',   done: false, active: false },
+    ];
+    const HISTORY = [
+      { id: '#1202', date: 'Entregue em 12/04/2025', items: 2, total: 450, img: IMGS.meltbox },
+      { id: '#1187', date: 'Entregue em 08/04/2025', items: 3, total: 780, img: IMGS.pollo  },
+      { id: '#1155', date: 'Entregue em 05/04/2025', items: 1, total: 250, img: IMGS.texmex },
+    ];
+
+    const OrdersScreen = R('div', { style: { flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: BG } }, [
+      R('div', { key: 'hdr', style: { flexShrink: 0, display: 'flex', alignItems: 'center', gap: 12, padding: '12px 20px 10px', cursor: 'pointer' }, onClick: () => this.back() }, [
+        R('span', { key: 'a', style: { fontSize: 22, color: WHITE } }, '←'),
+        R('span', { key: 't', style: { fontFamily: F, fontWeight: 800, fontSize: 20, color: WHITE } }, 'Meus Pedidos'),
+      ]),
+
+      // Tabs
+      R('div', { key: 'tabs', style: { flexShrink: 0, display: 'flex', margin: '0 20px', borderBottom: `1px solid ${BORDER}` } },
+        [{ id: 'ativos', label: 'Ativos' }, { id: 'historico', label: 'Histórico' }].map(tab =>
+          R('button', {
+            key: tab.id,
+            onClick: () => this.setState({ ordersTab: tab.id }),
+            style: {
+              background: 'none', border: 'none',
+              borderBottom: `2.5px solid ${ordersTab === tab.id ? RED : 'transparent'}`,
+              marginBottom: -1, padding: '9px 18px',
+              fontFamily: F, fontWeight: ordersTab === tab.id ? 700 : 400,
+              fontSize: 13.5, color: ordersTab === tab.id ? WHITE : GRAY, cursor: 'pointer',
+            },
+          }, tab.label)
+        )
+      ),
+
+      R('div', { key: 'scroll', style: { flex: 1, overflowY: 'auto', paddingTop: 14 } }, [
+        // Active order card
+        R('div', { key: 'act', style: { margin: '0 16px 12px', background: CARD, borderRadius: 16, border: `1px solid ${BORDER}`, padding: '14px' } }, [
+          R('div', { key: 'top', style: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 } }, [
+            R('div', { key: 'badge', style: { display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(232,23,77,0.13)', border: '1px solid rgba(232,23,77,0.28)', borderRadius: 20, padding: '4px 11px' } }, [
+              R('div', { key: 'd', style: { width: 7, height: 7, borderRadius: '50%', background: RED } }),
+              R('span', { key: 't', style: { fontFamily: F, fontSize: 11, fontWeight: 800, color: RED } }, 'Em preparo'),
+            ]),
+            R('div', { key: 'eta', style: { textAlign: 'right' } }, [
+              R('div', { key: 'l', style: { fontFamily: F, fontSize: 10, color: GRAY } }, 'Previsão de entrega'),
+              R('div', { key: 'v', style: { fontFamily: F, fontSize: 13, fontWeight: 800, color: WHITE } }, '30-40 min'),
+            ]),
+          ]),
+          R('div', { key: 'cust', style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 } }, [
+            R('div', { key: 'l', style: { display: 'flex', alignItems: 'center', gap: 10 } }, [
+              R('div', { key: 'av', style: { width: 36, height: 36, borderRadius: '50%', background: 'linear-gradient(135deg,#667eea,#764ba2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, overflow: 'hidden' } }, '👤'),
+              R('div', { key: 'i' }, [
+                R('div', { key: 'n', style: { fontFamily: F, fontWeight: 700, fontSize: 13.5, color: WHITE } }, 'João da Silva'),
+                R('div', { key: 'o', style: { fontFamily: F, fontSize: 11, color: GRAY } }, 'Pedido #1245 • 2 itens'),
+              ]),
+            ]),
+            R('span', { key: 'd', style: { fontFamily: F, fontSize: 12, color: RED, fontWeight: 700, cursor: 'pointer' } }, 'Ver detalhes'),
+          ]),
+          // Progress tracker
+          R('div', { key: 'prog', style: { display: 'flex', alignItems: 'flex-start' } },
+            PROGRESS_STEPS.map((step, i) =>
+              R('div', { key: step.id, style: { flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' } }, [
+                i > 0 ? R('div', { key: 'ln', style: { position: 'absolute', top: 10, right: '50%', width: '100%', height: 2, background: i === 1 ? `linear-gradient(to right, ${RED}, rgba(255,255,255,0.12))` : 'rgba(255,255,255,0.12)' } }) : null,
+                R('div', { key: 'c', style: { width: 22, height: 22, borderRadius: '50%', background: (step.done || step.active) ? RED : 'transparent', border: `2px solid ${(step.done || step.active) ? RED : 'rgba(255,255,255,0.2)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, zIndex: 1, position: 'relative', marginBottom: 5, color: WHITE, fontWeight: 800 } },
+                  step.done && !step.active ? '✓' : step.active ? '⏱' : ''),
+                R('span', { key: 'l', style: { fontFamily: F, fontSize: 8.5, fontWeight: step.active ? 800 : 400, color: step.active ? WHITE : step.done ? GRAY : 'rgba(255,255,255,0.28)', textAlign: 'center', lineHeight: 1.2 } }, step.label),
+              ])
+            )
+          ),
+        ]),
+
+        // Promo
+        R('div', { key: 'promo', style: { margin: '0 16px 16px', background: CARD, borderRadius: 14, border: `1px solid ${BORDER}`, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12 } }, [
+          R('div', { key: 'ic', style: { width: 44, height: 44, borderRadius: 12, background: 'linear-gradient(135deg,#ff6b35,#f7c59f)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 } }, '🎁'),
+          R('div', { key: 'txt', style: { flex: 1 } }, [
+            R('div', { key: 't', style: { fontFamily: F, fontWeight: 700, fontSize: 14, color: WHITE, marginBottom: 2 } }, 'Indique e ganhe!'),
+            R('div', { key: 's', style: { fontFamily: F, fontSize: 11.5, color: GRAY } }, 'Convide amigos e ganhe descontos'),
+          ]),
+          R('div', { key: 'arr', style: { width: 30, height: 30, borderRadius: '50%', background: 'rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: WHITE, fontSize: 17, cursor: 'pointer' } }, '›'),
+        ]),
+
+        // Histórico label
+        R('div', { key: 'hlbl', style: { padding: '0 20px 10px', fontFamily: F, fontWeight: 700, fontSize: 16, color: WHITE } }, 'Histórico'),
+
+        ...HISTORY.map(ord =>
+          R('div', { key: ord.id, style: { margin: '0 16px 10px', background: CARD, borderRadius: 14, border: `1px solid ${BORDER}`, padding: '11px 13px', display: 'flex', alignItems: 'center', gap: 11, cursor: 'pointer' } }, [
+            R('div', { key: 'th', style: { width: 46, height: 46, borderRadius: 10, overflow: 'hidden', flexShrink: 0 } },
+              R('img', { src: ord.img, alt: ord.id, style: { width: '100%', height: '100%', objectFit: 'cover' } })
+            ),
+            R('div', { key: 'info', style: { flex: 1 } }, [
+              R('div', { key: 'n', style: { fontFamily: F, fontWeight: 700, fontSize: 13, color: WHITE, marginBottom: 2 } }, `Pedido ${ord.id}`),
+              R('div', { key: 'd', style: { fontFamily: F, fontSize: 11, color: GRAY, marginBottom: 4 } }, ord.date),
+              R('div', { key: 'r', style: { display: 'inline-flex', alignItems: 'center', gap: 4, fontFamily: F, fontSize: 11, color: GRAY, cursor: 'pointer' } }, [
+                R('span', { key: 'ic', style: { fontSize: 12 } }, '↻'),
+                R('span', { key: 't' }, 'Pedir novamente'),
+              ]),
+            ]),
+            R('div', { key: 'r', style: { textAlign: 'right', flexShrink: 0 } }, [
+              R('div', { key: 'i', style: { fontFamily: F, fontSize: 11, color: GRAY, marginBottom: 2 } }, `${ord.items} itens`),
+              R('div', { key: 'p', style: { fontFamily: F, fontWeight: 800, fontSize: 14, color: WHITE } }, `${fmt(ord.total)} MT`),
+            ]),
+          ])
+        ),
+        R('div', { key: 'sp', style: { height: 10 } }),
+      ]),
+      BottomNav,
+    ]);
+
+    const screens = { home: HomeScreen, product: ProductScreen, cart: CartScreen, orders: OrdersScreen };
+
+    return {
+      isDark: true,
+      screenContent: screens[screen] || HomeScreen,
+    };
+  }
+}
+
+</script>
+</body>
+</html>
