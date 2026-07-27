@@ -73,14 +73,14 @@ export default function ProductDetail({
   const unit = lineUnitPrice(item, selVariant, selAddons);
 
   return (
-    <div className="fixed inset-0 z-40" style={{ background: 'rgba(20,20,20,0.28)' }}>
+    <div className="fixed inset-0 z-40 md:flex md:items-center md:justify-center md:p-6" style={{ background: 'rgba(20,20,20,0.28)' }}>
       <div
-        className="mx-auto flex h-full w-full max-w-[480px] flex-col"
+        className="mx-auto flex h-full w-full max-w-[480px] flex-col md:h-auto md:max-h-[92vh] md:max-w-4xl md:flex-row md:overflow-hidden md:rounded-3xl md:shadow-2xl"
         style={{ background: 'var(--st-bg)', color: 'var(--st-text)', fontFamily: 'var(--font-store)' }}
       >
-        {/* ── Galeria ─────────────────────────────────────────────── */}
-        <div className="shrink-0">
-          <div className="relative" style={{ aspectRatio: '4 / 5', background: 'var(--st-card)' }}>
+        {/* ── Galeria (coluna esquerda no desktop) ─────────────────── */}
+        <div className="shrink-0 md:flex md:h-full md:w-1/2 md:shrink-0 md:flex-col">
+          <div className="relative aspect-[4/5] md:flex-1 md:aspect-auto" style={{ background: 'var(--st-card)' }}>
             <SmartImage src={gallery[galleryIdx]} alt={item.name} monogram={item.name} />
 
             <button
@@ -118,6 +118,8 @@ export default function ProductDetail({
           )}
         </div>
 
+        {/* ── Coluna direita (desktop): conteúdo + CTA juntos ──────── */}
+        <div className="flex min-h-0 flex-1 flex-col md:w-1/2">
         {/* ── Conteúdo ────────────────────────────────────────────── */}
         <div className="flex-1 overflow-y-auto px-5 pb-6 pt-5">
           {categoryLabel && (
@@ -302,6 +304,7 @@ export default function ProductDetail({
             <span>Adicionar ao carrinho</span>
             <span>{mt(unit * qty)}</span>
           </button>
+        </div>
         </div>
       </div>
     </div>

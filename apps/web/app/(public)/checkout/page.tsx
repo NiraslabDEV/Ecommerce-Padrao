@@ -26,7 +26,7 @@ function lineUnitPrice(item: MenuItemLite | undefined, variantId?: string, addon
 
 // ── classes reutilizáveis (tokens da marca via CSS vars; ver (public)/CLAUDE.md) ──
 const CARD = 'rounded-2xl p-4 bg-[var(--st-card)] border border-[var(--st-line)]';
-const INPUT = 'w-full bg-[var(--st-bg)] border border-[var(--st-line)] rounded-xl px-4 py-3 text-white placeholder:text-[var(--st-muted)] focus:border-[var(--st-primary)] focus:outline-none';
+const INPUT = 'w-full bg-[var(--st-bg)] border border-[var(--st-line)] rounded-xl px-4 py-3 text-[var(--st-text)] placeholder:text-[var(--st-muted)] focus:border-[var(--st-primary)] focus:outline-none';
 // Opção selecionável glass 3D (F9). O ✓ é a rede de segurança para browsers sem color-mix.
 function Opt({ selected, onClick, children, className = '' }: { selected: boolean; onClick: () => void; children: React.ReactNode; className?: string }) {
   return (
@@ -321,10 +321,10 @@ export default function CheckoutPage() {
     const emolaName   = menuData?.emola_name;
 
     return (
-      <div className="min-h-screen bg-[var(--st-bg)] p-4">
-        <div className="max-w-[480px] mx-auto">
+      <div className="min-h-screen bg-[var(--st-bg)] p-4 md:flex md:items-center md:justify-center">
+        <div className="max-w-[480px] mx-auto md:mx-0 md:w-full md:max-w-lg">
           <div className={CARD + ' p-6'}>
-            <h2 className="text-2xl font-bold text-white mb-2 text-center">Pagamento Manual</h2>
+            <h2 className="text-2xl font-bold text-[var(--st-text)] mb-2 text-center">Pagamento Manual</h2>
             <p className="text-[var(--st-muted)] text-center mb-6">Transfira o valor e envie o comprovativo</p>
 
             <div className="bg-[var(--st-bg)] rounded-xl p-4 mb-6 border border-[var(--st-line)]">
@@ -376,7 +376,7 @@ export default function CheckoutPage() {
               Após transferir, envie o comprovativo abaixo para confirmar o pagamento.
             </p>
 
-            <label className="block w-full bg-[var(--st-card)] border border-[var(--st-line)] hover:border-[var(--st-primary)] text-white py-3 px-4 rounded-xl text-center cursor-pointer transition-colors mb-3">
+            <label className="block w-full bg-[var(--st-card)] border border-[var(--st-line)] hover:border-[var(--st-primary)] text-[var(--st-text)] py-3 px-4 rounded-xl text-center cursor-pointer transition-colors mb-3">
               <span>{paymentProof ? paymentProof.name : 'Selecionar Comprovativo'}</span>
               <input
                 type="file"
@@ -407,19 +407,20 @@ export default function CheckoutPage() {
 
   return (
     <div className="min-h-screen bg-[var(--st-bg)]">
-      <div className="max-w-[480px] mx-auto pb-8">
+      <div className="max-w-[480px] md:max-w-4xl lg:max-w-5xl mx-auto pb-8">
         {/* Header */}
         <header className="sticky top-0 z-10 bg-[var(--st-bg)]/95 backdrop-blur border-b border-[var(--st-line)]">
-          <div className="px-4 py-4 flex items-center gap-3">
-            <button onClick={() => router.push('/menu')} className="text-2xl text-white leading-none" aria-label="Voltar">←</button>
-            <h1 className="text-xl font-extrabold text-white">Finalizar pedido</h1>
+          <div className="px-4 md:px-8 lg:px-12 py-4 flex items-center gap-3">
+            <button onClick={() => router.push('/menu')} className="text-2xl text-[var(--st-text)] leading-none" aria-label="Voltar">←</button>
+            <h1 className="text-xl font-extrabold text-[var(--st-text)]">Finalizar pedido</h1>
           </div>
         </header>
 
-        <div className="space-y-4 mt-4 px-4">
+        <div className="mt-4 px-4 md:px-8 lg:px-12 md:grid md:grid-cols-[1fr_380px] md:gap-6 md:items-start">
+        <div className="space-y-4">
           {/* Dados do cliente */}
           <div className={CARD}>
-            <h2 className="text-white font-bold mb-4">Seus Dados</h2>
+            <h2 className="text-[var(--st-text)] font-bold mb-4">Seus Dados</h2>
             <div className="space-y-4">
               <div>
                 <label className="block text-[var(--st-muted)] text-sm mb-2">Nome *</label>
@@ -440,7 +441,7 @@ export default function CheckoutPage() {
 
           {/* Tipo de entrega */}
           <div className={CARD}>
-            <h2 className="text-white font-bold mb-4">Tipo de Entrega</h2>
+            <h2 className="text-[var(--st-text)] font-bold mb-4">Tipo de Entrega</h2>
             <div className="grid grid-cols-2 gap-3" style={{ perspective: '1000px' }}>
               <Opt selected={fulfillmentType === 'pickup'} onClick={() => { setFulfillmentType('pickup'); setDeliveryZoneId(''); setAddress(''); }} className="p-4 text-left">
                 <p className="glass-label">🏃 Levantamento</p>
@@ -456,7 +457,7 @@ export default function CheckoutPage() {
           {/* Detalhes de entrega */}
           {fulfillmentType === 'delivery' && (
             <div className={CARD}>
-              <h2 className="text-white font-bold mb-4">Detalhes de Entrega</h2>
+              <h2 className="text-[var(--st-text)] font-bold mb-4">Detalhes de Entrega</h2>
               <div className="space-y-4">
                 <div>
                   <label className="block text-[var(--st-muted)] text-sm mb-2">Zona *</label>
@@ -477,7 +478,7 @@ export default function CheckoutPage() {
 
           {/* Agendamento */}
           <div className={CARD}>
-            <h2 className="text-white font-bold mb-4">Agendamento</h2>
+            <h2 className="text-[var(--st-text)] font-bold mb-4">Agendamento</h2>
             <div className="grid grid-cols-2 gap-3" style={{ perspective: '1000px' }}>
               <Opt selected={scheduledFor === null} onClick={() => setScheduledFor(null)} className="p-4 text-left">
                 <p className="glass-label">Agora</p>
@@ -509,7 +510,7 @@ export default function CheckoutPage() {
 
           {/* Método de pagamento */}
           <div className={CARD}>
-            <h2 className="text-white font-bold mb-4">Pagamento</h2>
+            <h2 className="text-[var(--st-text)] font-bold mb-4">Pagamento</h2>
 
             {/* Toggle manual/auto — só aparece se Paysuite estiver configurado */}
             {hasAutoPayment && (
@@ -556,7 +557,7 @@ export default function CheckoutPage() {
 
           {/* Cupom de desconto */}
           <div className={CARD}>
-            <h2 className="text-white font-bold mb-3">Cupom de desconto</h2>
+            <h2 className="text-[var(--st-text)] font-bold mb-3">Cupom de desconto</h2>
 
             {referralCode && couponResult?.valid ? (
               /* Código aplicado */
@@ -622,10 +623,13 @@ export default function CheckoutPage() {
               </>
             )}
           </div>
+        </div>
 
+        {/* Coluna direita (desktop): Resumo fixo enquanto o cliente preenche a esquerda */}
+        <div className="space-y-4 mt-4 md:mt-0 md:sticky md:top-20">
           {/* Resumo */}
           <div className={CARD}>
-            <h2 className="text-white font-bold mb-4">Resumo</h2>
+            <h2 className="text-[var(--st-text)] font-bold mb-4">Resumo</h2>
             <div className="space-y-2 mb-4">
               {cart.map((item, idx) => {
                 const menuItem = menuData?.categories
@@ -640,7 +644,7 @@ export default function CheckoutPage() {
                       {menuItem?.name} x{item.qty}
                       {detail && <span className="block text-[11px] truncate" style={{ color: 'var(--st-muted)' }}>{detail}</span>}
                     </span>
-                    <span className="text-white shrink-0">{fmt(lineUnitPrice(menuItem, item.variantId, item.addonIds) * item.qty)}</span>
+                    <span className="text-[var(--st-text)] shrink-0">{fmt(lineUnitPrice(menuItem, item.variantId, item.addonIds) * item.qty)}</span>
                   </div>
                 );
               })}
@@ -648,12 +652,12 @@ export default function CheckoutPage() {
             <div className="border-t border-[var(--st-line)] pt-3 space-y-2">
               <div className="flex justify-between">
                 <span className="text-[var(--st-muted)]">Subtotal:</span>
-                <span className="text-white">{fmt(subtotal)}</span>
+                <span className="text-[var(--st-text)]">{fmt(subtotal)}</span>
               </div>
               {deliveryFee > 0 && (
                 <div className="flex justify-between">
                   <span className="text-[var(--st-muted)]">Taxa entrega:</span>
-                  <span className="text-white">+ {fmt(deliveryFee)}</span>
+                  <span className="text-[var(--st-text)]">+ {fmt(deliveryFee)}</span>
                 </div>
               )}
               {discountPreview() > 0 && (
@@ -669,8 +673,8 @@ export default function CheckoutPage() {
                 </div>
               )}
               <div className="flex justify-between text-lg font-extrabold pt-2 border-t border-[var(--st-line)]">
-                <span className="text-white">{referralCode ? 'Total estimado:' : 'Total:'}</span>
-                <span style={{ color: discountPreview() > 0 ? '#22c55e' : 'white' }}>
+                <span className="text-[var(--st-text)]">{referralCode ? 'Total estimado:' : 'Total:'}</span>
+                <span style={{ color: discountPreview() > 0 ? '#22c55e' : 'var(--st-text)' }}>
                   {fmt(Math.max(0, total - discountPreview()))}
                 </span>
               </div>
@@ -694,6 +698,7 @@ export default function CheckoutPage() {
             <Link href="/termos" className="underline">Termos</Link> e a{' '}
             <Link href="/privacidade" className="underline">Política de Privacidade</Link>.
           </p>
+        </div>
         </div>
       </div>
     </div>

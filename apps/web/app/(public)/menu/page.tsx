@@ -329,11 +329,20 @@ export default function MenuPage() {
 
   return (
     <Shell>
-      <div className="pb-28">
+      <div className="pb-28 md:pb-16">
         {/* Header */}
-        <header className="flex items-center justify-between px-5 pb-3 pt-5">
-          <div className="text-[19px] font-semibold tracking-[0.32em]">{ST.logoText}</div>
+        <header className="flex items-center justify-between px-5 pb-3 pt-5 md:px-8 md:pt-6 lg:px-12">
+          <div className="text-[19px] font-semibold tracking-[0.32em] md:text-[22px]">{ST.logoText}</div>
           <div className="flex items-center gap-1">
+            {/* Ações de conta — só desktop (no mobile vivem na bottom-nav) */}
+            <button onClick={openOrders} className="hidden h-10 items-center gap-1.5 rounded-full px-3 text-[13px] font-medium md:flex" style={{ color: 'var(--st-muted-2)' }}>
+              <NavIcon path="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              Pedidos
+            </button>
+            <button onClick={openProfile} className="hidden h-10 items-center gap-1.5 rounded-full px-3 text-[13px] font-medium md:flex" style={{ color: 'var(--st-muted-2)' }}>
+              <NavIcon path="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 11a4 4 0 100-8 4 4 0 000 8z" />
+              Perfil
+            </button>
             <button onClick={() => { setFiltersOpen(false); document.getElementById('plp-search')?.focus(); }} className="grid h-10 w-10 place-items-center rounded-full" aria-label="Pesquisar">
               <NavIcon path="M11 19a8 8 0 100-16 8 8 0 000 16zM21 21l-4.3-4.3" active />
             </button>
@@ -347,13 +356,13 @@ export default function MenuPage() {
         </header>
 
         {/* Hero — robusto a imagem ausente (gradiente + tipografia) */}
-        <section className="px-5">
-          <div className="relative overflow-hidden rounded-3xl" style={{ aspectRatio: '3 / 4', maxHeight: 460 }}>
+        <section className="px-5 md:px-8 lg:px-12">
+          <div className="relative overflow-hidden rounded-3xl aspect-[3/4] max-h-[460px] md:aspect-[21/9] md:max-h-[420px]">
             <SmartImage src={ST.hero.image} alt={brand.name} monogram={brand.name} rounded="rounded-3xl" />
             <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0) 35%, rgba(0,0,0,0.45) 100%)' }} />
-            <div className="absolute inset-x-0 bottom-0 p-6">
+            <div className="absolute inset-x-0 bottom-0 p-6 md:p-10">
               <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.24em] text-white/85">{brand.tagline}</p>
-              <h1 className="mb-4 max-w-[15ch] text-[30px] font-semibold leading-[1.05] text-white" style={{ textWrap: 'balance' } as React.CSSProperties}>{ST.hero.title}</h1>
+              <h1 className="mb-4 max-w-[15ch] text-[30px] font-semibold leading-[1.05] text-white md:text-[42px]" style={{ textWrap: 'balance' } as React.CSSProperties}>{ST.hero.title}</h1>
               <button
                 onClick={() => document.getElementById('plp-toolbar')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
                 className="inline-flex items-center rounded-full bg-white px-6 py-3 text-[12px] font-semibold uppercase tracking-[0.14em]"
@@ -370,7 +379,7 @@ export default function MenuPage() {
 
         {/* Cupom promocional (opcional, admin) */}
         {(promoBannerUrl || promoCode) && !promoDismissed && (
-          <div className="px-5 pt-5">
+          <div className="px-5 pt-5 md:px-8 lg:px-12">
             <div className="flex items-stretch overflow-hidden rounded-2xl" style={{ border: '1px solid var(--st-line)' }}>
               {promoBannerUrl && (
                 <div className="relative w-24 shrink-0"><SmartImage src={promoBannerUrl} alt="Cupom" /></div>
@@ -391,7 +400,7 @@ export default function MenuPage() {
         )}
 
         {/* Barra de código de amigo (F5.2) */}
-        <div className="px-5 pt-5">
+        <div className="px-5 pt-5 md:px-8 lg:px-12">
           {appliedCode ? (
             <div className="flex items-center justify-between rounded-2xl px-4 py-3" style={{ background: '#f2f8f3', border: '1px solid #cfe6d4' }}>
               <div className="flex min-w-0 items-center gap-2">
@@ -434,7 +443,7 @@ export default function MenuPage() {
 
         {/* SEU PRESENTE */}
         {refResult?.valid && refResult.reward_type === 'free_item' && refResult.gift_item_id && (
-          <div className="px-5 pt-5">
+          <div className="px-5 pt-5 md:px-8 lg:px-12">
             <p className="mb-2.5 text-[13px] font-semibold uppercase tracking-[0.14em]">🎁 Seu presente</p>
             <div className="w-[150px] overflow-hidden rounded-2xl" style={{ border: '1px solid #cfe6d4' }}>
               <div className="relative" style={{ aspectRatio: '3 / 4', background: 'var(--st-card)' }}>
@@ -449,7 +458,7 @@ export default function MenuPage() {
         )}
 
         {/* ── Toolbar PLP: busca + ordenação + filtros ── */}
-        <div id="plp-toolbar" className="sticky top-0 z-10 mt-6 px-5 pb-3 pt-3" style={{ background: 'var(--st-bg)', borderBottom: '1px solid var(--st-line)' }}>
+        <div id="plp-toolbar" className="sticky top-0 z-10 mt-6 px-5 pb-3 pt-3 md:px-8 lg:px-12" style={{ background: 'var(--st-bg)', borderBottom: '1px solid var(--st-line)' }}>
           <div className="flex items-center gap-2">
             <div className="flex flex-1 items-center gap-2 rounded-full px-4 py-2.5" style={{ border: '1px solid var(--st-line)' }}>
               <NavIcon path="M11 19a8 8 0 100-16 8 8 0 000 16zM21 21l-4.3-4.3" muted small />
@@ -542,13 +551,13 @@ export default function MenuPage() {
             {categories.length === 0 && <p className="py-16 text-center" style={{ color: 'var(--st-muted)' }}>Coleção em breve.</p>}
             {categories.map((cat) => cat.items.length > 0 && (
               <section key={cat.id}>
-                <div className="mb-3.5 flex items-end justify-between px-5">
-                  <h2 className="text-[17px] font-semibold tracking-tight">{cat.name}</h2>
+                <div className="mb-3.5 flex items-end justify-between px-5 md:px-8 lg:px-12">
+                  <h2 className="text-[17px] font-semibold tracking-tight md:text-[19px]">{cat.name}</h2>
                   <button onClick={() => setActiveCategory(cat.id)} className="text-[11px] font-semibold uppercase tracking-[0.12em]" style={{ color: 'var(--st-muted-2)' }}>Ver tudo</button>
                 </div>
-                <div className="flex gap-3.5 overflow-x-auto px-5 pb-1" style={{ scrollSnapType: 'x proximity', scrollbarWidth: 'none' }}>
+                <div className="flex gap-3.5 overflow-x-auto px-5 pb-1 md:px-8 md:gap-5 lg:px-12" style={{ scrollSnapType: 'x proximity', scrollbarWidth: 'none' }}>
                   {cat.items.map((item) => (
-                    <div key={item.id} style={{ scrollSnapAlign: 'start' }} className="w-[46%] shrink-0 max-w-[190px]">
+                    <div key={item.id} style={{ scrollSnapAlign: 'start' }} className="w-[46%] shrink-0 max-w-[190px] md:w-[220px] md:max-w-[220px]">
                       <ProductCard item={item} fav={favorites.has(item.id)} onToggleFav={() => toggleFav(item.id)} onOpen={() => openProduct(item)} onQuickAdd={() => (hasOptions(item) ? openProduct(item) : quickAdd(item))} />
                     </div>
                   ))}
@@ -557,7 +566,7 @@ export default function MenuPage() {
             ))}
           </div>
         ) : (
-          <div className="px-5 pt-6">
+          <div className="px-5 pt-6 md:px-8 lg:px-12">
             <p className="mb-4 text-[12px]" style={{ color: 'var(--st-muted)' }}>{filteredItems.length} {filteredItems.length === 1 ? 'produto' : 'produtos'}</p>
             {filteredItems.length === 0 ? (
               <div className="py-16 text-center">
@@ -565,7 +574,7 @@ export default function MenuPage() {
                 <button onClick={clearFilters} className="mt-2 text-[13px] font-semibold underline" style={{ color: 'var(--st-primary-2)' }}>Limpar filtros</button>
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-x-4 gap-y-7">
+              <div className="grid grid-cols-2 gap-x-4 gap-y-7 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 md:gap-x-6 md:gap-y-10">
                 {filteredItems.map((item) => (
                   <ProductCard key={item.id} item={item} fav={favorites.has(item.id)} onToggleFav={() => toggleFav(item.id)} onOpen={() => openProduct(item)} onQuickAdd={() => (hasOptions(item) ? openProduct(item) : quickAdd(item))} />
                 ))}
@@ -575,11 +584,11 @@ export default function MenuPage() {
         )}
       </div>
 
-      {/* Barra flutuante da sacola */}
+      {/* Barra flutuante da sacola (só mobile — no desktop a sacola já se vê no header) */}
       {count > 0 && !cartOpen && !product && (
         <button
           onClick={() => setCartOpen(true)}
-          className="fixed bottom-[86px] left-1/2 z-20 flex w-[calc(100%-2.5rem)] max-w-[440px] -translate-x-1/2 items-center justify-between rounded-full px-6 py-3.5 text-[13px] font-semibold uppercase tracking-[0.1em] text-white"
+          className="fixed bottom-[86px] left-1/2 z-20 flex w-[calc(100%-2.5rem)] max-w-[440px] -translate-x-1/2 items-center justify-between rounded-full px-6 py-3.5 text-[13px] font-semibold uppercase tracking-[0.1em] text-white md:hidden"
           style={{ background: 'var(--st-grad)' }}
         >
           <span className="flex items-center gap-2"><span className="grid h-5 w-5 place-items-center rounded-full bg-white/25 text-[11px]">{count}</span>Ver sacola</span>
@@ -587,8 +596,8 @@ export default function MenuPage() {
         </button>
       )}
 
-      {/* Bottom nav */}
-      <nav className="fixed bottom-0 left-1/2 z-20 flex w-full max-w-[480px] -translate-x-1/2" style={{ background: 'var(--st-bg)', borderTop: '1px solid var(--st-line)', paddingBottom: 16 }}>
+      {/* Bottom nav — padrão de app mobile; escondida no desktop (ações vivem no header) */}
+      <nav className="fixed bottom-0 left-1/2 z-20 flex w-full max-w-[480px] -translate-x-1/2 md:hidden" style={{ background: 'var(--st-bg)', borderTop: '1px solid var(--st-line)', paddingBottom: 16 }}>
         {NAV.map((n) => (
           <button key={n.id} onClick={n.onClick} className="flex flex-1 flex-col items-center gap-1 pb-1.5 pt-2.5">
             <NavIcon path={n.path} active={!!n.active} />
@@ -597,11 +606,11 @@ export default function MenuPage() {
         ))}
       </nav>
 
-      {/* Drawer da sacola */}
+      {/* Drawer da sacola — folha inferior no mobile; painel lateral fixo no desktop */}
       {cartOpen && (
-        <div className="fixed inset-0 z-30 flex flex-col justify-end" role="dialog" aria-modal="true">
+        <div className="fixed inset-0 z-30 flex flex-col justify-end md:flex-row md:justify-end" role="dialog" aria-modal="true">
           <div className="absolute inset-0" style={{ background: 'rgba(20,20,20,0.4)' }} onClick={() => setCartOpen(false)} />
-          <div className="relative mx-auto flex max-h-[85vh] w-full max-w-[480px] flex-col rounded-t-3xl" style={{ background: 'var(--st-bg)' }}>
+          <div className="relative mx-auto flex max-h-[85vh] w-full max-w-[480px] flex-col rounded-t-3xl md:mx-0 md:h-full md:max-h-full md:w-full md:max-w-[440px] md:rounded-t-none md:rounded-l-3xl" style={{ background: 'var(--st-bg)' }}>
             <div className="flex items-center justify-between border-b p-4" style={{ borderColor: 'var(--st-line)' }}>
               <h2 className="text-lg font-semibold">Minha sacola</h2>
               <button onClick={() => setCartOpen(false)} className="text-xl" style={{ color: 'var(--st-muted)' }} aria-label="Fechar">✕</button>
@@ -758,10 +767,10 @@ function ProductCard({ item, fav, onToggleFav, onOpen, onQuickAdd }: { item: Men
   );
 }
 
-// Coluna app centrada (mobile-first; centrada no desktop)
+// Coluna app centrada (mobile-first; expande para um layout de loja no desktop)
 function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="relative mx-auto min-h-screen w-full max-w-[480px]" style={{ background: 'var(--st-bg)', color: 'var(--st-text)', fontFamily: 'var(--font-store)' }}>
+    <div className="relative mx-auto min-h-screen w-full max-w-[480px] md:max-w-5xl lg:max-w-6xl" style={{ background: 'var(--st-bg)', color: 'var(--st-text)', fontFamily: 'var(--font-store)' }}>
       {children}
     </div>
   );
@@ -770,8 +779,8 @@ function Shell({ children }: { children: React.ReactNode }) {
 // ── Conta (F7): overlay full-screen (claro) ───────────────────────────────────
 function Overlay({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   return (
-    <div className="fixed inset-0 z-50" style={{ background: 'rgba(20,20,20,0.35)' }}>
-      <div className="mx-auto flex h-full w-full max-w-[480px] flex-col" style={{ background: 'var(--st-bg)', color: 'var(--st-text)' }}>
+    <div className="fixed inset-0 z-50 md:flex md:items-center md:justify-center md:p-6" style={{ background: 'rgba(20,20,20,0.35)' }}>
+      <div className="mx-auto flex h-full w-full max-w-[480px] flex-col md:h-auto md:max-h-[85vh] md:max-w-md md:overflow-hidden md:rounded-3xl md:shadow-2xl" style={{ background: 'var(--st-bg)', color: 'var(--st-text)' }}>
         <header className="flex shrink-0 items-center gap-3 border-b px-4 py-4" style={{ borderColor: 'var(--st-line)' }}>
           <button onClick={onClose} className="text-2xl leading-none" aria-label="Voltar">←</button>
           <h1 className="text-xl font-semibold">{title}</h1>

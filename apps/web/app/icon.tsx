@@ -3,6 +3,9 @@ import { brand } from '@brand';
 
 // Favicon whitelabel: monograma da marca sobre o gradiente da loja.
 // Gerado em runtime a partir de config/brand.ts — nada de asset fixo por cliente.
+// runtime 'edge' evita um bug do @vercel/og (variante node) que quebra o build
+// local no Windows ao resolver a fonte default via fileURLToPath.
+export const runtime = 'edge';
 export const size = { width: 32, height: 32 };
 export const contentType = 'image/png';
 

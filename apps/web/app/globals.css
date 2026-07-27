@@ -90,15 +90,15 @@ button {
   position: relative;
   border-radius: 20px;
   cursor: pointer;
-  /* vidro: fundo levemente branco + blur + saturate para "refração" */
-  background: rgba(255, 255, 255, 0.07);
+  /* vidro: tint derivado de --st-text (funciona em tema claro E escuro) + blur/saturate */
+  background: color-mix(in srgb, var(--st-text) 6%, transparent);
   backdrop-filter: blur(28px) saturate(1.8);
   -webkit-backdrop-filter: blur(28px) saturate(1.8);
   /* sombra suave + linha specular superior (inset) */
   box-shadow:
-    0 2px 14px rgba(0, 0, 0, 0.38),
+    0 2px 14px rgba(0, 0, 0, 0.16),
     inset 0 1.5px 0 rgba(255, 255, 255, 0.42),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.18);
+    inset 0 -1px 0 rgba(0, 0, 0, 0.10);
   transition:
     transform   0.22s cubic-bezier(0.34, 1.56, 0.64, 1),
     box-shadow  0.22s ease,
@@ -120,19 +120,19 @@ button {
   -webkit-mask-composite: xor; mask-composite: exclude;
 }
 
-/* Label não selecionado — branco suave */
-.glass-opt .glass-label { color: rgba(255, 255, 255, 0.62); font-weight: 500; }
+/* Label não selecionado — deriva de --st-text (funciona em tema claro e escuro) */
+.glass-opt .glass-label { color: color-mix(in srgb, var(--st-text) 62%, transparent); font-weight: 500; }
 
 /* SELECIONADO — vidro tingido com a cor da marca + lift limpo */
 .glass-opt.is-selected {
-  background: color-mix(in srgb, var(--st-primary) 22%, rgba(255, 255, 255, 0.10));
+  background: color-mix(in srgb, var(--st-primary) 22%, color-mix(in srgb, var(--st-text) 8%, transparent));
   backdrop-filter: blur(28px) saturate(2.2);
   -webkit-backdrop-filter: blur(28px) saturate(2.2);
   transform: scale(1.026) translateY(-2px);
   box-shadow:
-    0 6px 22px rgba(0, 0, 0, 0.44),
-    0 0 0 1.5px color-mix(in srgb, var(--st-primary) 55%, rgba(255, 255, 255, 0.35)),
-    inset 0 2px 0 rgba(255, 255, 255, 0.58),
+    0 6px 22px rgba(0, 0, 0, 0.20),
+    0 0 0 1.5px var(--st-primary),
+    inset 0 2px 0 rgba(255, 255, 255, 0.5),
     inset 0 -1px 0 rgba(0, 0, 0, 0.10);
 }
 
@@ -140,17 +140,17 @@ button {
 .glass-opt.is-selected::before {
   background: linear-gradient(
     158deg,
-    rgba(255, 255, 255, 0.70) 0%,
-    rgba(255, 255, 255, 0.18) 32%,
+    rgba(255, 255, 255, 0.55) 0%,
+    rgba(255, 255, 255, 0.12) 32%,
     color-mix(in srgb, var(--st-primary) 18%, transparent) 72%,
     transparent 100%
   );
 }
 
-/* Label selecionado — branco puro com glow suave da marca */
+/* Label selecionado — cor da marca com leve glow (legível em qualquer tema) */
 .glass-opt.is-selected .glass-label {
-  color: #ffffff; font-weight: 600;
-  text-shadow: 0 1px 10px color-mix(in srgb, var(--st-primary) 45%, transparent);
+  color: var(--st-primary); font-weight: 600;
+  text-shadow: 0 1px 10px color-mix(in srgb, var(--st-primary) 30%, transparent);
 }
 
 /* Pill — para chips de Adicionais */
