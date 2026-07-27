@@ -144,7 +144,7 @@ export default function MenuPage() {
     return () => clearTimeout(t);
   }, [toast]);
 
-  // view_menu — uma vez quando o cardápio carrega
+  // view_menu — uma vez quando o catálogo carrega
   const viewedRef = useRef(false);
   useEffect(() => {
     if (viewedRef.current || !menuData?.categories) return;

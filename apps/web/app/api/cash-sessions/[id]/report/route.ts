@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { brand } from '@brand';
 
 // Relatório HTML de fecho de caixa — abre em nova aba e dispara window.print()
 // O browser gera o PDF via "Guardar como PDF" no diálogo de impressão.
@@ -164,7 +165,7 @@ export async function GET(
       : ''
   }
 
-  <div class="footer">Gerado em ${new Date().toLocaleString('pt-MZ')} · Delivery OS</div>
+  <div class="footer">Gerado em ${new Date().toLocaleString('pt-MZ')} · ${brand.name}</div>
 
   <script>window.addEventListener('load', () => window.print());</script>
 </body>

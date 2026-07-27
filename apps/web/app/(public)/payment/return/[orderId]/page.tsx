@@ -109,7 +109,7 @@ export default function PaymentReturnPage() {
           Tentar Novamente
         </button>
         <button onClick={() => router.push('/menu')} className="w-full mt-3 py-4 px-4 rounded-2xl font-semibold" style={{ border: '1px solid var(--st-line)', color: 'var(--st-muted-2)' }}>
-          Voltar ao cardápio
+          Voltar à loja
         </button>
       </Wrap>
     );

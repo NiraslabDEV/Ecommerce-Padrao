@@ -70,7 +70,7 @@ export function SettingsSection() {
       )}
 
       <div className="flex justify-between items-center">
-        <h3 className="text-lg font-bold text-[#EA1D2C]">Definições do Restaurante</h3>
+        <h3 className="text-lg font-bold text-[#EA1D2C]">Definições da Loja</h3>
         <button
           onClick={() => setEditing(settings)}
           className="bg-[#EA1D2C] text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-[#c8161f] transition-colors"

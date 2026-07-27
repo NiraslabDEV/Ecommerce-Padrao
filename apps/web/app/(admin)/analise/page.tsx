@@ -354,7 +354,7 @@ export default function AnalisePage() {
             {(() => {
               const f = funnel.funnel;
               const steps: FunnelStep[] = [
-                { label: 'Viram o cardápio',    count: f.step_menu,     pct: null },
+                { label: 'Viram a loja',        count: f.step_menu,     pct: null },
                 { label: 'Iniciaram checkout',  count: f.step_checkout, pct: f.pct_menu_to_checkout },
                 { label: 'Escolheram pagamento',count: f.step_payment,  pct: f.pct_checkout_to_payment },
                 { label: 'Compraram',           count: f.step_purchase, pct: f.pct_payment_to_purchase },

@@ -2,10 +2,10 @@ import { createClient } from '@/utils/supabase/server';
 import { NextResponse } from 'next/server';
 
 function translateError(msg: string): string {
-  if (msg.startsWith('out_of_stock:'))   return 'Um ou mais itens do teu pedido estão esgotados. Volta ao cardápio e ajusta a quantidade.';
-  if (msg.startsWith('item_unavailable:')) return 'Um item do teu pedido deixou de estar disponível. Volta ao cardápio e remove-o.';
-  if (msg.startsWith('invalid_variant:'))  return 'O tamanho escolhido já não está disponível. Volta ao cardápio e escolhe outro.';
-  if (msg.startsWith('invalid_addon:'))    return 'Um dos adicionais escolhidos já não está disponível. Volta ao cardápio e ajusta.';
+  if (msg.startsWith('out_of_stock:'))   return 'Um ou mais itens do teu pedido estão esgotados. Volta à loja e ajusta a quantidade.';
+  if (msg.startsWith('item_unavailable:')) return 'Um item do teu pedido deixou de estar disponível. Volta à loja e remove-o.';
+  if (msg.startsWith('invalid_variant:'))  return 'O tamanho escolhido já não está disponível. Volta à loja e escolhe outro.';
+  if (msg.startsWith('invalid_addon:'))    return 'Uma das opções escolhidas já não está disponível. Volta à loja e ajusta.';
   if (msg === 'store_closed')             return 'A loja está encerrada de momento.';
   if (msg === 'empty_order')              return 'O carrinho está vazio.';
   if (msg === 'invalid_customer_name')    return 'Nome inválido.';

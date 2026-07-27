@@ -1,5 +1,6 @@
 import { createClient } from '@/utils/supabase/server';
 import { NextResponse } from 'next/server';
+import { formatMT, type Cents } from '@delivery/core';
 
 // Liga o comprovativo ao pedido (após upload no checkout) e avisa o dono por email.
 export async function POST(request: Request) {
@@ -24,10 +25,7 @@ export async function POST(request: Request) {
     // Email ao dono — best-effort, não bloqueia a resposta ao cliente
     const ownerEmail = data?.owner_email || process.env.OWNER_EMAIL;
     if (ownerEmail) {
-      const total = new Intl.NumberFormat('pt-MZ', {
-        style: 'currency',
-        currency: 'MZN',
-      }).format((data?.total_cents ?? 0) / 100);
+      const total = formatMT((data?.total_cents ?? 0) as Cents);
 
       const html = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">

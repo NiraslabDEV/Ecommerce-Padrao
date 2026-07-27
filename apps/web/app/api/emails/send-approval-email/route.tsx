@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { Resend } from 'resend';
+import { formatMT, type Cents } from '@delivery/core';
+import { brand } from '@brand';
 
 export async function POST(request: Request) {
   try {
@@ -22,10 +24,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const totalFormatted = new Intl.NumberFormat('pt-MZ', {
-      style: 'currency',
-      currency: 'MZN',
-    }).format(totalCents / 100);
+    const totalFormatted = formatMT(totalCents as Cents);
 
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -38,12 +37,12 @@ export async function POST(request: Request) {
           <p><strong>Método de Pagamento:</strong> ${paymentMethod.toUpperCase()}</p>
         </div>
         <p>Obrigado pela sua encomenda!</p>
-        <p>Equipa ${process.env.BRAND_NAME || 'Delivery OS'}</p>
+        <p>Equipa ${process.env.BRAND_NAME || brand.name}</p>
       </div>
     `;
 
     const { data, error } = await resend.emails.send({
-      from: process.env.RESEND_FROM_EMAIL || 'noreply@delivery-os.com',
+      from: process.env.RESEND_FROM_EMAIL || 'noreply@example.com',
       to,
       subject: `Pagamento Confirmado - Pedido ${orderNumber}`,
       html,

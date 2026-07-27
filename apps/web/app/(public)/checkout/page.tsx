@@ -155,7 +155,7 @@ export default function CheckoutPage() {
       .filter(Boolean) as TrackItem[];
   }
 
-  // begin_checkout — uma vez quando o carrinho + cardápio estão prontos (16.4)
+  // begin_checkout — uma vez quando o carrinho + catálogo estão prontos (16.4)
   const beganRef = useRef(false);
   useEffect(() => {
     if (beganRef.current || cart.length === 0 || !menuData?.categories) return;

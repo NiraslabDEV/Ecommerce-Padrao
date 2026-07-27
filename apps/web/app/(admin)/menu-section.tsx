@@ -56,10 +56,13 @@ interface Addon {
   active: boolean;
 }
 
+// Estação de preparo/impressão (herdado do schema — controla para que impressora
+// o item é enviado quando há mais de uma). Rótulos genéricos: nem toda loja
+// tem "cozinha"; algumas só precisam de 1 estação e podem ignorar o campo.
 const STATIONS = [
-  { value: 'kitchen',      label: 'Cozinha' },
-  { value: 'bar',          label: 'Bar' },
-  { value: 'cold_kitchen', label: 'Cozinha fria' },
+  { value: 'kitchen',      label: 'Estação 1 (padrão)' },
+  { value: 'bar',          label: 'Estação 2' },
+  { value: 'cold_kitchen', label: 'Estação 3' },
 ] as const;
 
 export function stationLabel(value: string): string {
@@ -216,7 +219,7 @@ export function MenuSection() {
               : 'bg-black/20 text-[#A8A8B0] hover:text-[#e8e8ea]'
           }`}
         >
-          Cardápio
+          Catálogo
         </button>
         <button
           onClick={() => setActiveTab('zones')}
@@ -410,7 +413,7 @@ function NewCategoryForm({ onAdd }: { onAdd: (name: string, station: string) => 
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="ex: Pratos principais"
+          placeholder="ex: Novidades"
           className="w-full bg-black/20 border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white placeholder-[#A8A8B0] focus:outline-none focus:border-[#EA1D2C]"
         />
       </div>
@@ -529,7 +532,7 @@ function ItemModal({
             onChange={(e) => setName(e.target.value)}
             required
             className="w-full bg-black/20 border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#EA1D2C]"
-            placeholder="ex: Frango grelhado"
+            placeholder="ex: Vestido Midi de Linho"
           />
         </div>
 
@@ -540,7 +543,7 @@ function ItemModal({
             onChange={(e) => setDescription(e.target.value)}
             rows={2}
             className="w-full bg-black/20 border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#EA1D2C]"
-            placeholder="ex: Com batata frita e salada"
+            placeholder="ex: Corte fluido em linho natural, alças ajustáveis"
           />
         </div>
 
@@ -745,7 +748,7 @@ function OptionsEditor({ itemId }: { itemId: string }) {
           ))}
           {addons.length === 0 && <li className="text-xs text-[#A8A8B0]">Sem adicionais.</li>}
         </ul>
-        <OptionAddRow placeholder="ex: Chantilly" onAdd={addAddon} />
+        <OptionAddRow placeholder="ex: Embrulho para presente" onAdd={addAddon} />
       </div>
     </div>
   );

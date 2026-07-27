@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import { createClient } from '@supabase/supabase-js';
+import { brand } from '@brand';
 
 // Envia email de fecho de caixa ao owner.
 // Body: { to: string, report?: object } (report inline)
@@ -135,7 +136,7 @@ export async function POST(request: Request) {
         : ''
     }
 
-    <p style="font-size:11px;color:#666;text-align:center;margin-top:8px">Delivery OS · ${new Date().toLocaleString('pt-MZ')}</p>
+    <p style="font-size:11px;color:#666;text-align:center;margin-top:8px">${brand.name} · ${new Date().toLocaleString('pt-MZ')}</p>
   </div>
 </body>
 </html>`;
@@ -143,7 +144,7 @@ export async function POST(request: Request) {
   try {
     const resend = new Resend(apiKey);
     const { error } = await resend.emails.send({
-      from: process.env.RESEND_FROM_EMAIL || 'noreply@delivery-os.com',
+      from: process.env.RESEND_FROM_EMAIL || 'noreply@example.com',
       to,
       subject: `Fecho de Caixa — ${closedAt ? fmtDT(closedAt) : new Date().toLocaleDateString('pt-MZ')}`,
       html,

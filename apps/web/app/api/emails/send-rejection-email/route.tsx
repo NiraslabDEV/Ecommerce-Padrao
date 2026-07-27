@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { Resend } from 'resend';
+import { brand } from '@brand';
 
 export async function POST(request: Request) {
   try {
@@ -32,13 +33,13 @@ export async function POST(request: Request) {
           <p><strong>Método de Pagamento:</strong> ${paymentMethod.toUpperCase()}</p>
           <p><strong>Motivo:</strong> ${reason}</p>
         </div>
-        <p>Por favor, verifique os dados do pagamento ou entre em contacto com o restaurante.</p>
-        <p>Equipa ${process.env.BRAND_NAME || 'Delivery OS'}</p>
+        <p>Por favor, verifique os dados do pagamento ou entre em contacto connosco.</p>
+        <p>Equipa ${process.env.BRAND_NAME || brand.name}</p>
       </div>
     `;
 
     const { data, error } = await resend.emails.send({
-      from: process.env.RESEND_FROM_EMAIL || 'noreply@delivery-os.com',
+      from: process.env.RESEND_FROM_EMAIL || 'noreply@example.com',
       to,
       subject: `Pagamento Não Confirmado - Pedido ${orderNumber}`,
       html,

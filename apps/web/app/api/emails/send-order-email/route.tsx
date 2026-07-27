@@ -23,7 +23,7 @@ export async function POST(request: Request) {
     }
 
     const { data, error } = await resend.emails.send({
-      from: process.env.RESEND_FROM_EMAIL || 'noreply@delivery-os.com',
+      from: process.env.RESEND_FROM_EMAIL || 'noreply@example.com',
       to,
       subject,
       html,
