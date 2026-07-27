@@ -13,12 +13,18 @@ export function SmartImage({
   monogram,
   rounded,
   className = '',
+  fit = 'cover',
 }: {
   src?: string | null;
   alt: string;
   monogram?: string;
   rounded?: string;
   className?: string;
+  // 'contain': mostra a foto inteira sem cortar (letterbox no fundo do
+  // contentor). Necessário quando o sujeito da foto não está centrado no
+  // enquadramento original — nesse caso NENHUM ponto de ancoragem de um
+  // crop "cover" resolve o "fora de centro", só não cortar resolve.
+  fit?: 'cover' | 'contain';
 }) {
   const [failed, setFailed] = useState(false);
 
@@ -40,7 +46,8 @@ export function SmartImage({
         alt={alt}
         loading="lazy"
         onError={() => setFailed(true)}
-        className={`absolute inset-0 h-full w-full object-cover ${rounded ?? ''} ${className}`}
+        className={`absolute inset-0 h-full w-full ${rounded ?? ''} ${className}`}
+        style={{ objectFit: fit }}
       />
     );
   }

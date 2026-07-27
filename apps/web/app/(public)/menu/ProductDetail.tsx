@@ -101,7 +101,7 @@ export default function ProductDetail({
             efeito nenhum. */}
         <div className="shrink-0 md:flex md:h-full md:w-1/2 md:shrink-0 md:flex-col">
           <div className="relative aspect-[2/3] max-h-[70vh] md:aspect-auto md:max-h-none md:flex-1" style={{ background: 'var(--st-card)' }}>
-            <SmartImage src={gallery[galleryIdx]} alt={item.name} monogram={item.name} className="object-top" />
+            <SmartImage src={gallery[galleryIdx]} alt={item.name} monogram={item.name} fit="contain" />
 
             <button
               onClick={onClose}
