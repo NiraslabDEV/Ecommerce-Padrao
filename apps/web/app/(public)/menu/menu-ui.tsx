@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { HARDCODED_PRODUCT_VIDEOS } from './product-videos';
 
 // ── Imagem robusta a assets ausentes ─────────────────────────────────────────
 // Os assets do brand demo (/assets/luma/*) ainda não existem e os produtos vêm
@@ -88,10 +89,12 @@ export function ProductMedia({
   rounded?: string;
   fit?: 'cover' | 'contain';
 }) {
-  if (item.video_url) {
+  const videoSrc = item.video_url ?? HARDCODED_PRODUCT_VIDEOS[item.name];
+
+  if (videoSrc) {
     return (
       <video
-        src={item.video_url}
+        src={videoSrc}
         poster={item.photo_url ?? undefined}
         autoPlay
         muted
