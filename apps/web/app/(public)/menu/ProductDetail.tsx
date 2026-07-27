@@ -100,7 +100,13 @@ export default function ProductDetail({
             fazia parte da area com scroll, por isso arrastar sobre ela nao tinha
             efeito nenhum. */}
         <div className="shrink-0 md:flex md:h-full md:w-1/2 md:shrink-0 md:flex-col">
-          <div className="relative aspect-[2/3] max-h-[70vh] md:aspect-auto md:max-h-none md:flex-1" style={{ background: 'var(--st-card)' }}>
+          {/* SEM max-h aqui: aspect-ratio + max-height juntos fazem o CSS encolher
+              a LARGURA da caixa (pra preservar a proporção sob o teto de altura) e,
+              sem margin:auto, ela cola à esquerda — sobra branco à direita. Era
+              exatamente o "fora de centro" reportado. Sem teto de altura, a caixa
+              fica sempre 100% da largura (o modal já rola inteiro, então uma foto
+              mais alta deixa de ser um problema). */}
+          <div className="relative aspect-[2/3] md:aspect-auto md:max-h-none md:flex-1" style={{ background: 'var(--st-card)' }}>
             <SmartImage src={gallery[galleryIdx]} alt={item.name} monogram={item.name} fit="contain" />
 
             <button
