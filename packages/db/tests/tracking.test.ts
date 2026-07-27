@@ -14,12 +14,10 @@ import { createClient, SupabaseClient } from "@supabase/supabase-js";
 const SUPABASE_URL = process.env.SUPABASE_URL ?? "http://localhost:54531";
 
 const ANON_KEY =
-  process.env.SUPABASE_ANON_KEY ??
-  "***REMOVED***";
+  process.env.SUPABASE_ANON_KEY!;
 
 const SERVICE_KEY =
-  process.env.SUPABASE_SERVICE_ROLE_KEY ??
-  "***REMOVED***";
+  process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 const PUBLIC_FIELDS = [
   "gtm_container_id",

@@ -14,8 +14,8 @@ import { describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 const SUPABASE_URL  = process.env.SUPABASE_URL  ?? 'http://localhost:54531';
-const ANON_KEY      = process.env.SUPABASE_ANON_KEY        ?? '***REMOVED***';
-const SERVICE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '***REMOVED***';
+const ANON_KEY      = process.env.SUPABASE_ANON_KEY!;
+const SERVICE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 const TEST_EMAIL    = 'payments-staff@delivery.test';
 const TEST_PASSWORD = 'test-staff-pay-123!';
