@@ -17,6 +17,7 @@ function Icon({ name }: { name: string }) {
     analise: <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />,
     feedback: <path d="m12 2 3 7 7 .5-5.5 4.5 2 7-6.5-4-6.5 4 2-7L2 9.5 9 9z" />,
     clientes: <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM22 21v-2a4 4 0 0 0-3-3.87" />,
+    cupons: <><path d="M3 7h18v4a2 2 0 0 0 0 4v4H3v-4a2 2 0 0 0 0-4V7Z" /><path d="M9 7v14" strokeDasharray="2 2" /></>,
     marketing: <path d="m3 11 18-5v12L3 14v-3zM11.6 16.8a3 3 0 1 1-5.8-1.6" />,
     definicoes: <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm8-3a8 8 0 0 0-.2-1.8l2-1.5-2-3.4-2.3 1a8 8 0 0 0-3-1.8L14 .5h-4l-.5 2.2a8 8 0 0 0-3 1.8l-2.3-1-2 3.4 2 1.5A8 8 0 0 0 4 12c0 .6 0 1.2.2 1.8l-2 1.5 2 3.4 2.3-1a8 8 0 0 0 3 1.8L10 23.5h4l.5-2.2a8 8 0 0 0 3-1.8l2.3 1 2-3.4-2-1.5c.2-.6.2-1.2.2-1.8Z" />,
   };
@@ -34,6 +35,7 @@ const NAV = [
   { href: '/analise', label: 'Análise', icon: 'analise' },
   { href: '/feedback', label: 'Avaliações', icon: 'feedback' },
   { href: '/lista-espera', label: 'Clientes', icon: 'clientes' },
+  { href: '/cupons', label: 'Cupons', icon: 'cupons' },
   { href: '/marketing', label: 'Marketing', icon: 'marketing' },
   { href: '/definicoes', label: 'Definições', icon: 'definicoes' },
 ];
