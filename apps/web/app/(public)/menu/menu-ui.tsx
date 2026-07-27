@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 // ── Imagem robusta a assets ausentes ─────────────────────────────────────────
 // Os assets do brand demo (/assets/luma/*) ainda não existem e os produtos vêm
@@ -21,12 +21,21 @@ export function SmartImage({
   className?: string;
 }) {
   const [failed, setFailed] = useState(false);
+
+  // Reset ao trocar de imagem — sem isto, uma falha antiga "prende" o componente
+  // no fallback mesmo depois de `src` mudar para uma foto válida (ex.: navegar
+  // entre produtos relacionados dentro do mesmo card/instância montada).
+  useEffect(() => {
+    setFailed(false);
+  }, [src]);
+
   const showImg = Boolean(src) && !failed;
 
   if (showImg) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
       <img
+        key={src}
         src={src as string}
         alt={alt}
         loading="lazy"

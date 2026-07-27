@@ -373,32 +373,33 @@ export default function MenuPage() {
           </div>
         </header>
 
-        {/* Hero — robusto a imagem ausente (gradiente + tipografia) */}
-        <section className="px-5 md:px-8 lg:px-12">
-          <div className="relative overflow-hidden rounded-3xl aspect-[3/4] max-h-[460px] md:aspect-[21/9] md:max-h-[420px]">
-            <SmartImage src={ST.hero.image} alt={brand.name} monogram={brand.name} rounded="rounded-3xl" />
-            <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0) 35%, rgba(0,0,0,0.45) 100%)' }} />
-            <div className="absolute inset-x-0 bottom-0 p-6 md:p-10">
-              <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.24em] text-white/85">{brand.tagline}</p>
-              <h1 className="mb-4 max-w-[15ch] text-[30px] font-semibold leading-[1.05] text-white md:text-[42px]" style={{ textWrap: 'balance' } as React.CSSProperties}>{ST.hero.title}</h1>
-              <button
-                onClick={() => document.getElementById('plp-toolbar')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
-                className="inline-flex items-center rounded-full bg-white px-6 py-3 text-[12px] font-semibold uppercase tracking-[0.14em]"
-                style={{ color: 'var(--st-text)' }}
-              >
-                {ST.hero.cta}
-              </button>
-            </div>
-          </div>
-          {ST.hero.subtitle && (
-            <p className="mt-4 text-center text-[13px] leading-relaxed" style={{ color: 'var(--st-muted-2)' }}>{ST.hero.subtitle}</p>
-          )}
-        </section>
-
-        {/* Banners de categoria (F10+): carrossel rotativo, transições variadas, métrica de clique */}
-        {banners.length > 0 && (
-          <section className="mt-7 px-5 md:px-8 lg:px-12">
+        {/* Banners de categoria (F10+): carrossel rotativo, transições variadas, métrica de clique.
+            Substitui o hero estático — com banners reais cadastrados, o hero genérico era redundante. */}
+        {banners.length > 0 ? (
+          <section className="pt-5 px-5 md:px-8 lg:px-12">
             <BannerCarousel banners={banners} onOpen={openBanner} />
+          </section>
+        ) : (
+          // Sem banners cadastrados ainda: mantém o hero de brand.ts como fallback (nunca fica sem topo).
+          <section className="px-5 md:px-8 lg:px-12">
+            <div className="relative overflow-hidden rounded-3xl aspect-[3/4] max-h-[460px] md:aspect-[21/9] md:max-h-[420px]">
+              <SmartImage src={ST.hero.image} alt={brand.name} monogram={brand.name} rounded="rounded-3xl" />
+              <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0) 35%, rgba(0,0,0,0.45) 100%)' }} />
+              <div className="absolute inset-x-0 bottom-0 p-6 md:p-10">
+                <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.24em] text-white/85">{brand.tagline}</p>
+                <h1 className="mb-4 max-w-[15ch] text-[30px] font-semibold leading-[1.05] text-white md:text-[42px]" style={{ textWrap: 'balance' } as React.CSSProperties}>{ST.hero.title}</h1>
+                <button
+                  onClick={() => document.getElementById('plp-toolbar')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                  className="inline-flex items-center rounded-full bg-white px-6 py-3 text-[12px] font-semibold uppercase tracking-[0.14em]"
+                  style={{ color: 'var(--st-text)' }}
+                >
+                  {ST.hero.cta}
+                </button>
+              </div>
+            </div>
+            {ST.hero.subtitle && (
+              <p className="mt-4 text-center text-[13px] leading-relaxed" style={{ color: 'var(--st-muted-2)' }}>{ST.hero.subtitle}</p>
+            )}
           </section>
         )}
 
