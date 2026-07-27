@@ -1,7 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import Image from 'next/image';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { formatMT, type Cents } from '@delivery/core';
@@ -9,14 +8,15 @@ import { useCart } from '@/utils/useCart';
 import { createClient } from '@/utils/supabase/client';
 import { trackViewMenu, trackViewItem, trackAddToCart, trackLead, trackCouponApplied, type TrackItem } from '@/lib/analytics/track';
 import { brand } from '@brand';
+import type { MenuItem, Category } from './menu-types';
+import { SmartImage } from './menu-ui';
+import ProductDetail, { type AddToCartPayload } from './ProductDetail';
 
 const mt = (cents: number) => formatMT(cents as Cents);
 const ST = brand.storefront;
 
-type Variant = { id: string; name: string; price_cents: number; is_default?: boolean };
-type Addon = { id: string; name: string; price_cents: number };
-type MenuItem = { id: string; name: string; description: string | null; price_cents: number; photo_url: string | null; available?: boolean; variants?: Variant[]; addons?: Addon[] };
-type Category = { id: string; name: string; photo_url?: string | null; items: MenuItem[] };
+const norm = (s: string) => s.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
+
 type ReferralResult = {
   valid: boolean;
   reason?: string;
@@ -30,38 +30,35 @@ type ReferralResult = {
 const REFERRAL_KEY = 'referral_code';
 const REFERRAL_RESULT_KEY = 'referral_result';
 
-// preço unitário de uma linha = (variante escolhida ou base) + Σ adicionais.
-// PREVIEW no client; o servidor (create_order) é a verdade (CLAUDE §6).
+// preço unitário de uma linha = (variante ou base) + Σ adicionais (PREVIEW; servidor é a verdade).
 function lineUnitPrice(item: MenuItem, variantId?: string, addonIds: string[] = []): number {
   const base = variantId ? (item.variants?.find((v) => v.id === variantId)?.price_cents ?? item.price_cents) : item.price_cents;
   const addons = (item.addons ?? []).filter((a) => addonIds.includes(a.id)).reduce((s, a) => s + a.price_cents, 0);
   return base + addons;
 }
 const hasOptions = (item: MenuItem) => Boolean(item.variants?.length || item.addons?.length);
+
 type ReorderItem = { menu_item_id: string; qty: number };
 type FavItem = { menu_item_id: string; name: string; qty: number };
 type RecentOrder = { id: string; order_number: string; status: string; total_cents: number; created_at: string };
 type CustomerSummary = { phone: string; name: string | null; orders_count: number; total_spent_cents: number; favorites: FavItem[]; recent_orders: RecentOrder[] };
 type CustomerOrder = { id: string; order_number: string; status: string; fulfillment_type: string; total_cents: number; created_at: string; scheduled_for: string | null; items: { menu_item_id: string; name: string; qty: number }[] };
 
-// foto do item ou fallback determinístico dos assets da marca (whitelabel)
-const imgFor = (item: MenuItem, idx: number) =>
-  item.photo_url || ST.fallbackImages[idx % ST.fallbackImages.length];
+type SortMode = 'featured' | 'price_asc' | 'price_desc' | 'new';
 
 const FAV_KEY = 'fav_items';
 const DL_PHONE_KEY = 'dl_phone';
 
-// rótulo/cor de estado para a lista "Meus Pedidos"
 const ORDER_STATUS: Record<string, { label: string; color: string }> = {
-  awaiting_approval: { label: 'Aguarda aprovação', color: '#f59e0b' },
-  awaiting_payment: { label: 'Aguarda pagamento', color: '#f59e0b' },
-  paid: { label: 'Pago', color: '#3b82f6' },
-  approved: { label: 'Aceite', color: '#22c55e' },
-  in_preparation: { label: 'Em preparo', color: '#f59e0b' },
-  ready: { label: 'Pronto', color: '#8b5cf6' },
-  delivered: { label: 'Entregue', color: '#22c55e' },
-  cancelled: { label: 'Cancelado', color: '#ef4444' },
-  payment_failed: { label: 'Falhou', color: '#ef4444' },
+  awaiting_approval: { label: 'Aguarda aprovação', color: '#b7791f' },
+  awaiting_payment: { label: 'Aguarda pagamento', color: '#b7791f' },
+  paid: { label: 'Pago', color: '#2563eb' },
+  approved: { label: 'Aceite', color: '#16a34a' },
+  in_preparation: { label: 'Em preparo', color: '#b7791f' },
+  ready: { label: 'Pronto', color: '#7c3aed' },
+  delivered: { label: 'Entregue', color: '#16a34a' },
+  cancelled: { label: 'Cancelado', color: '#dc2626' },
+  payment_failed: { label: 'Falhou', color: '#dc2626' },
 };
 const isActiveOrder = (s: string) => ['awaiting_approval', 'awaiting_payment', 'paid', 'approved', 'in_preparation', 'ready'].includes(s);
 
@@ -71,10 +68,15 @@ export default function MenuPage() {
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [toast, setToast] = useState<string | null>(null);
   const [product, setProduct] = useState<MenuItem | null>(null);
-  const [productQty, setProductQty] = useState(1);
-  const [selVariant, setSelVariant] = useState<string | undefined>(undefined);
-  const [selAddons, setSelAddons] = useState<string[]>([]);
   const [account, setAccount] = useState<'identify' | 'orders' | 'profile' | null>(null);
+
+  // ── PLP: busca / filtros / ordenação ──────────────────────────────────────
+  const [search, setSearch] = useState('');
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [sortMode, setSortMode] = useState<SortMode>('featured');
+  const [priceMax, setPriceMax] = useState<number | null>(null);
+  const [variantFacet, setVariantFacet] = useState<string | null>(null);
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   // F5.2 — barra de referral
   const [refInput, setRefInput] = useState('');
@@ -86,7 +88,7 @@ export default function MenuPage() {
   const [phone, setPhone] = useState<string | null>(null);
   const [customer, setCustomer] = useState<CustomerSummary | null>(null);
   const [myOrders, setMyOrders] = useState<CustomerOrder[] | null>(null);
-  const { cart, add, setQty, setQtyByIndex, qtyOf, count, clear } = useCart();
+  const { cart, add, setQtyByIndex, count, clear } = useCart();
   const supabase = createClient();
 
   const { data: menuData, isLoading, error } = useQuery({
@@ -98,37 +100,21 @@ export default function MenuPage() {
     },
   });
 
-  const categories: Category[] = menuData?.categories || [];
+  const categories: Category[] = useMemo(() => menuData?.categories || [], [menuData]);
   const acceptingOrders = menuData?.accepting_orders ?? true;
   const promoBannerUrl: string | null = menuData?.promo_banner_url ?? null;
   const promoCode: string | null = menuData?.promo_code ?? null;
 
-  // null = modo browse (todos os carrosséis); string = modo filtro (só essa categoria, vertical)
-  const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [promoDismissed, setPromoDismissed] = useState(false);
   const [promoCopied, setPromoCopied] = useState(false);
 
   useEffect(() => {
-    const dismissed = sessionStorage.getItem('promo_dismissed');
-    if (dismissed) setPromoDismissed(true);
+    if (sessionStorage.getItem('promo_dismissed')) setPromoDismissed(true);
   }, []);
-
-  const dismissPromo = () => {
-    setPromoDismissed(true);
-    sessionStorage.setItem('promo_dismissed', '1');
-  };
-
+  const dismissPromo = () => { setPromoDismissed(true); sessionStorage.setItem('promo_dismissed', '1'); };
   const copyPromoCode = () => {
     if (!promoCode) return;
-    navigator.clipboard.writeText(promoCode).then(() => {
-      setPromoCopied(true);
-      setTimeout(() => setPromoCopied(false), 2000);
-    });
-  };
-
-  // Toggle: clicar na bolinha activa desselecciona (volta aos carrosséis)
-  const selectCategory = (id: string) => {
-    setActiveCategory((prev) => (prev === id ? null : id));
+    navigator.clipboard.writeText(promoCode).then(() => { setPromoCopied(true); setTimeout(() => setPromoCopied(false), 2000); });
   };
 
   // favoritos (cosmético, local)
@@ -141,8 +127,7 @@ export default function MenuPage() {
   const toggleFav = (id: string) =>
     setFavorites((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      if (next.has(id)) next.delete(id); else next.add(id);
       localStorage.setItem(FAV_KEY, JSON.stringify([...next]));
       return next;
     });
@@ -165,21 +150,28 @@ export default function MenuPage() {
     if (flat.length) trackViewMenu(flat);
   }, [menuData]);
 
-  function handleAdd(item: MenuItem) {
+  const allItems: MenuItem[] = useMemo(() => categories.flatMap((c) => c.items), [categories]);
+  const lineDetail = (id: string) => allItems.find((i) => i.id === id);
+  const categoryOf = (id: string) => categories.find((c) => c.items.some((i) => i.id === id))?.name ?? '';
+
+  function quickAdd(item: MenuItem) {
     add(item.id);
     trackAddToCart({ id: item.id, name: item.name, price_cents: item.price_cents, qty: 1 });
+    setToast('Adicionado à sacola');
   }
 
   function openProduct(item: MenuItem) {
     setProduct(item);
-    setProductQty(1);
-    // tamanho: pré-seleciona o padrão (ou o primeiro) se houver variantes
-    const def = item.variants?.find((v) => v.is_default) ?? item.variants?.[0];
-    setSelVariant(def?.id);
-    setSelAddons([]);
     trackViewItem({ id: item.id, name: item.name, price_cents: item.price_cents });
   }
-  const categoryOf = (id: string) => categories.find((c) => c.items.some((i) => i.id === id))?.name ?? '';
+  const openProductById = (id: string) => { const it = allItems.find((i) => i.id === id); if (it) openProduct(it); };
+
+  function onAddFromPDP(p: AddToCartPayload) {
+    if (!product) return;
+    add(product.id, p.qty, { variantId: p.variantId, addonIds: p.addonIds });
+    trackAddToCart({ id: product.id, name: product.name, price_cents: p.unitPriceCents, qty: p.qty });
+    setToast(`${p.qty}× ${product.name} na sacola`);
+  }
 
   // ── Conta (F7): identificação soft por telefone (sem OTP) ────────────────
   const persistPhone = (p: string) => {
@@ -204,7 +196,7 @@ export default function MenuPage() {
   };
   const reorder = (items: ReorderItem[]) => {
     items.forEach((it) => add(it.menu_item_id, it.qty));
-    setAccount(null); setCartOpen(true); setToast('Itens adicionados ao carrinho');
+    setAccount(null); setCartOpen(true); setToast('Itens adicionados à sacola');
   };
   const openOrders = () => { if (phone) { setAccount('orders'); loadMyOrders(phone); } else { setIdentifyNext('orders'); setAccount('identify'); } };
   const openProfile = () => { if (phone) setAccount('profile'); else { setIdentifyNext('profile'); setAccount('identify'); } };
@@ -213,23 +205,19 @@ export default function MenuPage() {
     if (identifyNext === 'orders') { setAccount('orders'); loadMyOrders(p); } else setAccount('profile');
   };
 
-  // restaura a identificação ao carregar
   useEffect(() => {
     const saved = typeof window !== 'undefined' ? localStorage.getItem(DL_PHONE_KEY) : null;
     if (saved) { setPhone(saved); identify(saved); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // restaura o código de referral aplicado ao carregar
   useEffect(() => {
-    const savedCode   = localStorage.getItem(REFERRAL_KEY);
+    const savedCode = localStorage.getItem(REFERRAL_KEY);
     const savedResult = localStorage.getItem(REFERRAL_RESULT_KEY);
     if (savedCode && savedResult) {
       try {
         const parsed = JSON.parse(savedResult) as ReferralResult;
-        setAppliedCode(savedCode);
-        setRefResult(parsed);
-        setRefInput(savedCode);
+        setAppliedCode(savedCode); setRefResult(parsed); setRefInput(savedCode);
         if (parsed.gift_item_id) setGiftItemIds(new Set([parsed.gift_item_id]));
       } catch { /* ignora */ }
     }
@@ -240,10 +228,7 @@ export default function MenuPage() {
     if (!code) return;
     setRefLoading(true);
     try {
-      const { data, error: rpcError } = await supabase.rpc('validate_referral', {
-        p_code:  code,
-        p_phone: phone ?? '',
-      });
+      const { data, error: rpcError } = await supabase.rpc('validate_referral', { p_code: code, p_phone: phone ?? '' });
       if (rpcError || !data) { setRefResult({ valid: false, reason: 'invalid_or_expired' }); return; }
       const result = data as ReferralResult;
       setRefResult(result);
@@ -254,39 +239,68 @@ export default function MenuPage() {
         trackCouponApplied(code);
         if (result.gift_item_id) {
           setGiftItemIds(new Set([result.gift_item_id]));
-          // auto-adicionar o brinde ao carrinho se ainda não estiver lá
           add(result.gift_item_id, 1);
-          setToast('🎁 Código aplicado! O seu presente foi adicionado ao carrinho.');
+          setToast('🎁 Código aplicado! O seu presente foi adicionado à sacola.');
         } else {
-          setToast('✅ Código aplicado! Desconto activo no checkout.');
+          setToast('Código aplicado! Desconto activo no checkout.');
         }
       }
     } finally {
       setRefLoading(false);
     }
   };
-
   const removeReferral = () => {
-    setAppliedCode(null);
-    setRefResult(null);
-    setRefInput('');
-    setGiftItemIds(new Set());
-    localStorage.removeItem(REFERRAL_KEY);
-    localStorage.removeItem(REFERRAL_RESULT_KEY);
+    setAppliedCode(null); setRefResult(null); setRefInput(''); setGiftItemIds(new Set());
+    localStorage.removeItem(REFERRAL_KEY); localStorage.removeItem(REFERRAL_RESULT_KEY);
   };
 
-  const scrollTo = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  const scrollTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
+  // ── PLP: cálculo de bounds e opções de filtro ─────────────────────────────
+  const priceBounds = useMemo(() => {
+    if (allItems.length === 0) return { min: 0, max: 0 };
+    const prices = allItems.map((i) => i.price_cents);
+    return { min: Math.min(...prices), max: Math.max(...prices) };
+  }, [allItems]);
+
+  const variantNames = useMemo(() => {
+    const set = new Set<string>();
+    allItems.forEach((i) => (i.variants ?? []).forEach((v) => set.add(v.name)));
+    return [...set];
+  }, [allItems]);
+
+  const filtersActive = Boolean(search.trim()) || activeCategory !== null || sortMode !== 'featured' || priceMax !== null || variantFacet !== null;
+
+  const filteredItems = useMemo(() => {
+    let items = allItems;
+    if (activeCategory) items = categories.find((c) => c.id === activeCategory)?.items ?? [];
+    const q = norm(search.trim());
+    if (q) items = items.filter((i) => norm(i.name).includes(q) || (i.description ? norm(i.description).includes(q) : false));
+    if (priceMax !== null) items = items.filter((i) => i.price_cents <= priceMax);
+    if (variantFacet) items = items.filter((i) => (i.variants ?? []).some((v) => v.name === variantFacet));
+
+    const idx = (i: MenuItem) => allItems.findIndex((x) => x.id === i.id);
+    const sorted = [...items];
+    if (sortMode === 'price_asc') sorted.sort((a, b) => a.price_cents - b.price_cents);
+    else if (sortMode === 'price_desc') sorted.sort((a, b) => b.price_cents - a.price_cents);
+    else if (sortMode === 'new') sorted.sort((a, b) => idx(b) - idx(a)); // proxy de "novidades" (sem timestamp no payload)
+    return sorted;
+  }, [allItems, categories, activeCategory, search, priceMax, variantFacet, sortMode]);
+
+  const clearFilters = () => { setSearch(''); setActiveCategory(null); setSortMode('featured'); setPriceMax(null); setVariantFacet(null); };
+
+  const subtotal = cart.reduce((s, l) => {
+    const it = lineDetail(l.menuItemId);
+    return s + (it ? lineUnitPrice(it, l.variantId, l.addonIds) : 0) * l.qty;
+  }, 0);
 
   if (!acceptingOrders) return <Shell><WaitlistForm /></Shell>;
 
   if (isLoading) {
     return (
       <Shell>
-        <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="flex min-h-screen items-center justify-center p-4">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 mx-auto mb-4" style={{ borderColor: 'var(--st-primary)' }} />
-            <p style={{ color: 'var(--st-muted)' }}>A carregar cardápio…</p>
+            <div className="mx-auto mb-4 h-7 w-7 animate-spin rounded-full border-b-2" style={{ borderColor: 'var(--st-primary)' }} />
+            <p style={{ color: 'var(--st-muted)' }}>A carregar a loja…</p>
           </div>
         </div>
       </Shell>
@@ -296,420 +310,305 @@ export default function MenuPage() {
   if (error) {
     return (
       <Shell>
-        <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="flex min-h-screen items-center justify-center p-4">
           <div className="text-center">
-            <p className="mb-2" style={{ color: 'var(--st-primary)' }}>Erro ao carregar cardápio</p>
-            <button onClick={() => window.location.reload()} className="underline" style={{ color: 'var(--st-primary)' }}>
-              Tentar novamente
-            </button>
+            <p className="mb-2" style={{ color: 'var(--st-text)' }}>Erro ao carregar a loja</p>
+            <button onClick={() => window.location.reload()} className="underline" style={{ color: 'var(--st-primary-2)' }}>Tentar novamente</button>
           </div>
         </div>
       </Shell>
     );
   }
 
-  const allItems = categories.flatMap((c) => c.items);
-  const lineDetail = (id: string) => allItems.find((i) => i.id === id);
-  const subtotal = cart.reduce((s, l) => {
-    const it = lineDetail(l.menuItemId);
-    return s + (it ? lineUnitPrice(it, l.variantId, l.addonIds) : 0) * l.qty;
-  }, 0);
-  // índice global estável para o fallback de imagem
-  const globalIndex = (id: string) => allItems.findIndex((i) => i.id === id);
-
-  const Stepper = ({ item }: { item: MenuItem }) => {
-    const qty = qtyOf(item.id);
-    if (qty === 0) {
-      return (
-        <button
-          onClick={(e) => { e.stopPropagation(); handleAdd(item); }}
-          className="w-8 h-8 rounded-full grid place-items-center text-white font-bold shrink-0"
-          style={{ background: 'var(--st-grad)' }}
-          aria-label={`Adicionar ${item.name}`}
-        >+</button>
-      );
-    }
-    return (
-      <div className="flex items-center gap-1.5 rounded-full px-1 py-0.5 shrink-0" style={{ background: '#111', border: '1px solid var(--st-line)' }} onClick={(e) => e.stopPropagation()}>
-        <button onClick={() => setQty(item.id, qty - 1)} className="w-6 h-6 grid place-items-center text-white font-bold" aria-label="Diminuir">−</button>
-        <span className="text-white text-sm font-bold w-4 text-center">{qty}</span>
-        <button onClick={() => handleAdd(item)} className="w-6 h-6 grid place-items-center font-bold" style={{ color: 'var(--st-primary)' }} aria-label="Aumentar">+</button>
-      </div>
-    );
-  };
-
-  // Card de produto — carousel=true: largura fixa 150px horizontal; false: grid vertical
-  const FoodCard = ({ item, carousel = false }: { item: MenuItem; carousel?: boolean }) => {
-    const fav = favorites.has(item.id);
-    return (
-      <div
-        onClick={() => openProduct(item)}
-        className={`rounded-2xl overflow-hidden cursor-pointer${carousel ? ' shrink-0 w-[150px]' : ' w-full'}`}
-        style={{ background: 'var(--st-card)', border: '1px solid var(--st-line)' }}
-      >
-        <div className="relative h-[108px]">
-          <Image src={imgFor(item, globalIndex(item.id))} alt={item.name} fill sizes="150px" className="object-cover" />
-          <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, transparent 45%, rgba(0,0,0,0.55) 100%)' }} />
-          <button
-            onClick={(e) => { e.stopPropagation(); toggleFav(item.id); }}
-            className="absolute top-2 right-2 w-7 h-7 rounded-full grid place-items-center text-sm"
-            style={{ background: 'rgba(0,0,0,0.45)', color: fav ? 'var(--st-primary)' : '#ddd' }}
-            aria-label="Favorito"
-          >{fav ? '♥' : '♡'}</button>
-        </div>
-        <div className="p-2.5">
-          <div className="text-white font-bold text-[13px] leading-tight truncate">{item.name}</div>
-          {item.description && <div className="text-[11px] mt-0.5 truncate" style={{ color: 'var(--st-muted)' }}>{item.description}</div>}
-          <div className="flex items-center justify-between mt-2">
-            <span className="text-white font-extrabold text-[13px]">
-              {hasOptions(item) && <span className="text-[10px] font-semibold mr-0.5" style={{ color: 'var(--st-muted)' }}>desde </span>}
-              {mt(item.price_cents)}
-            </span>
-            {hasOptions(item) ? (
-              <button
-                onClick={(e) => { e.stopPropagation(); openProduct(item); }}
-                className="w-8 h-8 rounded-full grid place-items-center text-white font-bold shrink-0"
-                style={{ background: 'var(--st-grad)' }}
-                aria-label={`Escolher opções de ${item.name}`}
-              >+</button>
-            ) : (
-              <Stepper item={item} />
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  // Card de lista (modo filtro): faixa full-width com foto à esquerda e info à direita
-  const ListCard = ({ item }: { item: MenuItem }) => {
-    const fav = favorites.has(item.id);
-    return (
-      <div
-        onClick={() => openProduct(item)}
-        className="flex items-center gap-3 cursor-pointer py-3 border-b"
-        style={{ borderColor: 'var(--st-line)' }}
-      >
-        {/* Foto quadrada */}
-        <div className="relative w-20 h-20 rounded-xl overflow-hidden shrink-0">
-          <Image src={imgFor(item, globalIndex(item.id))} alt={item.name} fill sizes="80px" className="object-cover" />
-          <button
-            onClick={(e) => { e.stopPropagation(); toggleFav(item.id); }}
-            className="absolute top-1 right-1 w-5 h-5 rounded-full grid place-items-center text-[10px]"
-            style={{ background: 'rgba(0,0,0,0.5)', color: fav ? 'var(--st-primary)' : '#ddd' }}
-            aria-label="Favorito"
-          >{fav ? '♥' : '♡'}</button>
-        </div>
-
-        {/* Informação — expande lateralmente */}
-        <div className="flex-1 min-w-0">
-          <p className="text-white font-bold text-[14px] leading-tight">{item.name}</p>
-          {item.description && (
-            <p className="text-[12px] mt-0.5 line-clamp-2 leading-snug" style={{ color: 'var(--st-muted)' }}>
-              {item.description}
-            </p>
-          )}
-          <div className="flex items-center justify-between mt-2">
-            <span className="text-white font-extrabold text-[14px]">
-              {hasOptions(item) && <span className="text-[10px] font-semibold mr-0.5" style={{ color: 'var(--st-muted)' }}>desde </span>}
-              {mt(item.price_cents)}
-            </span>
-            <div onClick={(e) => e.stopPropagation()}>
-              {hasOptions(item) ? (
-                <button
-                  onClick={() => openProduct(item)}
-                  className="w-8 h-8 rounded-full grid place-items-center text-white font-bold shrink-0"
-                  style={{ background: 'var(--st-grad)' }}
-                  aria-label={`Escolher ${item.name}`}
-                >+</button>
-              ) : (
-                <Stepper item={item} />
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
   const NAV = [
-    { id: 'home', label: 'Início', onClick: scrollTop, active: true, path: 'M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z' },
-    { id: 'menu', label: 'Cardápio', onClick: () => scrollTo('cardapio'), path: 'M4 6h16M4 12h16M4 18h10' },
+    { id: 'home', label: 'Loja', onClick: () => { clearFilters(); window.scrollTo({ top: 0, behavior: 'smooth' }); }, active: true, path: 'M4 10.5 12 4l8 6.5M6 9.5V20h12V9.5' },
+    { id: 'search', label: 'Explorar', onClick: () => { setFiltersOpen(false); document.getElementById('plp-toolbar')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, path: 'M11 19a8 8 0 100-16 8 8 0 000 16zM21 21l-4.3-4.3' },
     { id: 'orders', label: 'Pedidos', onClick: openOrders, path: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2' },
     { id: 'perfil', label: 'Perfil', onClick: openProfile, path: 'M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 11a4 4 0 100-8 4 4 0 000 8z' },
   ];
-
-  const favCount = favorites.size;
 
   return (
     <Shell>
       <div className="pb-28">
         {/* Header */}
-        <header className="flex items-center justify-between px-5 pt-3 pb-2.5">
-          <div className="font-black text-sm tracking-[2px] text-white border-2 border-white rounded-md px-2.5 py-1">{ST.logoText}</div>
-          <div className="flex items-center gap-2.5">
-            <button onClick={() => setToast('Favoritos chegam em breve.')} className="relative w-9 h-9 rounded-full grid place-items-center" style={{ background: 'rgba(255,255,255,0.08)', color: 'var(--st-primary)' }} aria-label="Favoritos">
-              ♥
-              {favCount > 0 && <span className="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 grid place-items-center rounded-full text-[8px] font-extrabold text-white" style={{ background: 'var(--st-primary)' }}>{favCount}</span>}
+        <header className="flex items-center justify-between px-5 pb-3 pt-5">
+          <div className="text-[19px] font-semibold tracking-[0.32em]">{ST.logoText}</div>
+          <div className="flex items-center gap-1">
+            <button onClick={() => { setFiltersOpen(false); document.getElementById('plp-search')?.focus(); }} className="grid h-10 w-10 place-items-center rounded-full" aria-label="Pesquisar">
+              <NavIcon path="M11 19a8 8 0 100-16 8 8 0 000 16zM21 21l-4.3-4.3" active />
             </button>
-            <button onClick={() => setToast('Sem notificações novas.')} className="w-9 h-9 rounded-full grid place-items-center text-base" style={{ background: 'rgba(255,255,255,0.08)' }} aria-label="Notificações">🔔</button>
+            <button onClick={() => setCartOpen(true)} className="relative grid h-10 w-10 place-items-center rounded-full" aria-label="Sacola">
+              <NavIcon path="M6 8h12l-1 12H7L6 8zM9 8V6a3 3 0 016 0v2" active />
+              {count > 0 && (
+                <span className="absolute -right-0 -top-0 grid h-4 min-w-4 place-items-center rounded-full px-1 text-[9px] font-bold text-white" style={{ background: 'var(--st-primary)' }}>{count}</span>
+              )}
+            </button>
           </div>
         </header>
 
-        {/* Hero */}
-        <button onClick={() => scrollTo('cardapio')} className="block w-full text-left relative h-[400px] overflow-hidden">
-          <Image src={ST.hero.image} alt={brand.name} fill priority sizes="(max-width:480px) 100vw, 480px" className="object-cover" />
-          <div className="absolute inset-0" style={{ background: 'linear-gradient(120deg, rgba(10,5,2,0.85) 0%, rgba(20,10,5,0.55) 55%, rgba(10,5,2,0.25) 100%)' }} />
-          <div className="absolute bottom-0 left-0 p-5 max-w-[260px]">
-            <div className="font-black text-white text-2xl leading-[1.1] mb-1.5" style={{ textWrap: 'balance' } as React.CSSProperties}>{ST.hero.title}</div>
-            <div className="text-[12px] mb-3" style={{ color: 'rgba(255,255,255,0.75)' }}>{ST.hero.subtitle}</div>
-            <span className="inline-block bg-white text-[#111] rounded-lg px-4 py-2 font-extrabold text-[11px] tracking-wide">{ST.hero.cta}</span>
+        {/* Hero — robusto a imagem ausente (gradiente + tipografia) */}
+        <section className="px-5">
+          <div className="relative overflow-hidden rounded-3xl" style={{ aspectRatio: '3 / 4', maxHeight: 460 }}>
+            <SmartImage src={ST.hero.image} alt={brand.name} monogram={brand.name} rounded="rounded-3xl" />
+            <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0) 35%, rgba(0,0,0,0.45) 100%)' }} />
+            <div className="absolute inset-x-0 bottom-0 p-6">
+              <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.24em] text-white/85">{brand.tagline}</p>
+              <h1 className="mb-4 max-w-[15ch] text-[30px] font-semibold leading-[1.05] text-white" style={{ textWrap: 'balance' } as React.CSSProperties}>{ST.hero.title}</h1>
+              <button
+                onClick={() => document.getElementById('plp-toolbar')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                className="inline-flex items-center rounded-full bg-white px-6 py-3 text-[12px] font-semibold uppercase tracking-[0.14em]"
+                style={{ color: 'var(--st-text)' }}
+              >
+                {ST.hero.cta}
+              </button>
+            </div>
           </div>
-        </button>
+          {ST.hero.subtitle && (
+            <p className="mt-4 text-center text-[13px] leading-relaxed" style={{ color: 'var(--st-muted-2)' }}>{ST.hero.subtitle}</p>
+          )}
+        </section>
 
-        {/* Cupom promocional — sobreposto ao hero, configurável no admin */}
+        {/* Cupom promocional (opcional, admin) */}
         {(promoBannerUrl || promoCode) && !promoDismissed && (
-          <div className="px-4 -mt-6 relative z-10">
-            <div className="rounded-2xl overflow-hidden flex items-stretch shadow-xl" style={{ background: 'var(--st-card)', border: '1px solid var(--st-line)' }}>
+          <div className="px-5 pt-5">
+            <div className="flex items-stretch overflow-hidden rounded-2xl" style={{ border: '1px solid var(--st-line)' }}>
               {promoBannerUrl && (
-                <div className="relative w-28 shrink-0">
-                  <Image src={promoBannerUrl} alt="Cupom" fill sizes="112px" className="object-cover" />
-                </div>
+                <div className="relative w-24 shrink-0"><SmartImage src={promoBannerUrl} alt="Cupom" /></div>
               )}
-              <div className="flex-1 p-3 min-w-0">
-                <p className="text-[11px] font-semibold mb-1" style={{ color: 'var(--st-muted)' }}>Use o cupom:</p>
+              <div className="min-w-0 flex-1 p-3.5">
+                <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.16em]" style={{ color: 'var(--st-muted)' }}>Cupom</p>
                 {promoCode && (
-                  <button
-                    onClick={copyPromoCode}
-                    className="flex items-center gap-2 rounded-lg px-2.5 py-1 mb-1"
-                    style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid var(--st-line)' }}
-                    aria-label="Copiar código"
-                  >
-                    <span className="font-mono font-extrabold text-sm text-white tracking-wider">{promoCode}</span>
-                    <span className="text-[14px]">{promoCopied ? '✓' : '⧉'}</span>
+                  <button onClick={copyPromoCode} className="mb-1 inline-flex items-center gap-2 rounded-lg px-2.5 py-1" style={{ border: '1px solid var(--st-line)' }} aria-label="Copiar código">
+                    <span className="font-mono text-sm font-semibold tracking-wider">{promoCode}</span>
+                    <span className="text-[13px]" style={{ color: 'var(--st-primary-2)' }}>{promoCopied ? '✓' : '⧉'}</span>
                   </button>
                 )}
-                <p className="text-[10px] leading-tight" style={{ color: 'var(--st-muted)' }}>
-                  Válido apenas para a primeira compra. Não cumulativo com outras promoções.
-                </p>
+                <p className="text-[10.5px] leading-tight" style={{ color: 'var(--st-muted)' }}>Válido apenas na primeira compra. Não cumulativo.</p>
               </div>
-              <button onClick={dismissPromo} className="w-8 shrink-0 grid place-items-center text-lg" style={{ color: 'var(--st-muted)' }} aria-label="Fechar">✕</button>
+              <button onClick={dismissPromo} className="w-9 shrink-0" style={{ color: 'var(--st-muted)' }} aria-label="Fechar">✕</button>
             </div>
           </div>
         )}
 
         {/* Barra de código de amigo (F5.2) */}
-        <div className="px-5 pt-4">
+        <div className="px-5 pt-5">
           {appliedCode ? (
-            <div className="flex items-center justify-between rounded-2xl px-4 py-3" style={{ background: '#0f2a1a', border: '1px solid #22c55e44' }}>
-              <div className="flex items-center gap-2 min-w-0">
-                <span className="text-[#22c55e] text-lg">✓</span>
+            <div className="flex items-center justify-between rounded-2xl px-4 py-3" style={{ background: '#f2f8f3', border: '1px solid #cfe6d4' }}>
+              <div className="flex min-w-0 items-center gap-2">
+                <span style={{ color: '#16a34a' }}>✓</span>
                 <div className="min-w-0">
-                  <span className="text-[#22c55e] font-bold text-sm">{appliedCode}</span>
-                  {refResult?.reward_type === 'discount_cents' && (
-                    <span className="block text-[11px]" style={{ color: 'var(--st-muted)' }}>
-                      Desconto: -{mt(refResult.reward_value ?? 0)}
-                    </span>
-                  )}
-                  {refResult?.reward_type === 'discount_pct' && (
-                    <span className="block text-[11px]" style={{ color: 'var(--st-muted)' }}>
-                      Desconto: -{refResult.reward_value}%
-                    </span>
-                  )}
-                  {refResult?.reward_type === 'free_item' && (
-                    <span className="block text-[11px]" style={{ color: 'var(--st-muted)' }}>
-                      🎁 {refResult.gift_item_name ?? 'Brinde'} adicionado ao carrinho
-                    </span>
-                  )}
+                  <span className="text-sm font-semibold" style={{ color: '#15803d' }}>{appliedCode}</span>
+                  {refResult?.reward_type === 'discount_cents' && <span className="block text-[11px]" style={{ color: 'var(--st-muted)' }}>Desconto: -{mt(refResult.reward_value ?? 0)}</span>}
+                  {refResult?.reward_type === 'discount_pct' && <span className="block text-[11px]" style={{ color: 'var(--st-muted)' }}>Desconto: -{refResult.reward_value}%</span>}
+                  {refResult?.reward_type === 'free_item' && <span className="block text-[11px]" style={{ color: 'var(--st-muted)' }}>🎁 {refResult.gift_item_name ?? 'Brinde'} na sacola</span>}
                 </div>
               </div>
-              <button onClick={removeReferral} className="text-sm shrink-0 ml-3" style={{ color: 'var(--st-muted)' }} aria-label="Remover código">✕</button>
+              <button onClick={removeReferral} className="ml-3 shrink-0 text-sm" style={{ color: 'var(--st-muted)' }} aria-label="Remover código">✕</button>
             </div>
           ) : (
             <div className="flex gap-2">
               <input
-                type="text"
-                value={refInput}
+                type="text" value={refInput}
                 onChange={(e) => setRefInput(e.target.value.toUpperCase())}
                 onKeyDown={(e) => e.key === 'Enter' && applyReferral()}
-                placeholder="Código do teu amigo 🎁"
+                placeholder="Código de amigo"
                 maxLength={50}
-                className="flex-1 bg-[var(--st-card)] border border-[var(--st-line)] rounded-xl px-4 py-2.5 text-white placeholder:text-[var(--st-muted)] text-sm focus:border-[var(--st-primary)] focus:outline-none"
+                className="flex-1 rounded-full px-4 py-2.5 text-sm focus:outline-none"
+                style={{ border: '1px solid var(--st-line)', color: 'var(--st-text)' }}
                 aria-label="Código de referral"
               />
-              <button
-                onClick={applyReferral}
-                disabled={refLoading || !refInput.trim()}
-                className="px-4 py-2.5 rounded-xl font-bold text-white text-sm transition-all active:scale-[0.97] disabled:opacity-50 shrink-0"
-                style={{ background: 'var(--st-grad)' }}
-              >
+              <button onClick={applyReferral} disabled={refLoading || !refInput.trim()} className="shrink-0 rounded-full px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-40" style={{ background: 'var(--st-grad)' }}>
                 {refLoading ? '…' : 'Aplicar'}
               </button>
             </div>
           )}
           {refResult && !refResult.valid && (
-            <p className="mt-1.5 text-xs px-1" style={{ color: 'var(--st-primary)' }}>
-              {refResult.reason === 'auto_redemption'    ? 'Não podes usar o teu próprio código.' :
-               refResult.reason === 'already_redeemed'  ? 'Já usaste este código antes.' :
-               refResult.reason === 'max_redemptions_reached' ? 'Este código atingiu o limite de utilizações.' :
+            <p className="mt-1.5 px-1 text-xs" style={{ color: '#dc2626' }}>
+              {refResult.reason === 'auto_redemption' ? 'Não podes usar o teu próprio código.' :
+               refResult.reason === 'already_redeemed' ? 'Já usaste este código antes.' :
+               refResult.reason === 'max_redemptions_reached' ? 'Este código atingiu o limite.' :
                'Código inválido ou expirado.'}
             </p>
           )}
         </div>
 
-        {/* SEU PRESENTE — visível quando código free_item aplicado */}
+        {/* SEU PRESENTE */}
         {refResult?.valid && refResult.reward_type === 'free_item' && refResult.gift_item_id && (
-          <div className="px-5 pt-4">
-            <div className="flex items-center gap-2 mb-2.5">
-              <span className="text-white font-bold text-base">🎁 SEU PRESENTE</span>
-            </div>
-            <div className="flex gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
-              <div className="shrink-0 w-[150px] rounded-2xl overflow-hidden" style={{ background: 'var(--st-card)', border: '1px solid #22c55e44' }}>
-                {refResult.gift_item_photo_url ? (
-                  <div className="relative h-[108px]">
-                    <Image src={refResult.gift_item_photo_url} alt={refResult.gift_item_name ?? 'Brinde'} fill sizes="150px" className="object-cover" />
-                  </div>
-                ) : (
-                  <div className="h-[108px] grid place-items-center text-4xl" style={{ background: '#0f2a1a' }}>🎁</div>
-                )}
-                <div className="p-2.5">
-                  <div className="text-white font-bold text-[13px] leading-tight truncate">{refResult.gift_item_name ?? 'Brinde'}</div>
-                  <div className="flex items-center justify-between mt-2">
-                    <span className="font-extrabold text-[13px]" style={{ color: '#22c55e' }}>GRÁTIS</span>
-                  </div>
-                </div>
+          <div className="px-5 pt-5">
+            <p className="mb-2.5 text-[13px] font-semibold uppercase tracking-[0.14em]">🎁 Seu presente</p>
+            <div className="w-[150px] overflow-hidden rounded-2xl" style={{ border: '1px solid #cfe6d4' }}>
+              <div className="relative" style={{ aspectRatio: '3 / 4', background: 'var(--st-card)' }}>
+                <SmartImage src={refResult.gift_item_photo_url ?? null} alt={refResult.gift_item_name ?? 'Brinde'} monogram={refResult.gift_item_name ?? '🎁'} />
+              </div>
+              <div className="p-2.5">
+                <div className="truncate text-[13px] font-medium">{refResult.gift_item_name ?? 'Brinde'}</div>
+                <div className="mt-1 text-[13px] font-semibold" style={{ color: '#16a34a' }}>Grátis</div>
               </div>
             </div>
           </div>
         )}
 
-        {/* Categorias — barra circular estilo Instagram highlights (sticky) */}
-        {categories.length > 0 && (
-          <div id="cardapio" className="sticky top-0 z-10 pt-4 pb-2" style={{ background: 'var(--st-bg)' }}>
-            <div className="flex gap-4 overflow-x-auto px-4 pb-1" style={{ scrollbarWidth: 'none' }}>
-              {categories.filter((c) => c.items.length > 0).map((cat) => {
-                const isActive = activeCategory === cat.id;
-                return (
-                  <button
-                    key={cat.id}
-                    onClick={() => selectCategory(cat.id)}
-                    className="flex flex-col items-center gap-1.5 shrink-0"
-                    aria-pressed={isActive}
-                  >
-                    <div
-                      className="w-16 h-16 rounded-full overflow-hidden flex items-center justify-center shrink-0"
-                      style={{
-                        border: isActive ? '2.5px solid var(--st-primary)' : '2.5px solid var(--st-line)',
-                        boxShadow: isActive ? '0 0 0 2px var(--st-primary)' : 'none',
-                        background: 'var(--st-card)',
-                        transition: 'box-shadow 0.2s, border-color 0.2s',
-                      }}
-                    >
-                      {cat.photo_url ? (
-                        <Image src={cat.photo_url} alt={cat.name} width={64} height={64} className="object-cover w-full h-full" />
-                      ) : (
-                        <span className="text-2xl font-black text-white">{cat.name[0]}</span>
-                      )}
-                    </div>
-                    <span
-                      className="text-[11px] font-semibold text-center leading-tight max-w-[64px] truncate"
-                      style={{ color: isActive ? 'var(--st-primary)' : 'var(--st-muted)' }}
-                    >
-                      {cat.name}
-                    </span>
-                  </button>
-                );
-              })}
+        {/* ── Toolbar PLP: busca + ordenação + filtros ── */}
+        <div id="plp-toolbar" className="sticky top-0 z-10 mt-6 px-5 pb-3 pt-3" style={{ background: 'var(--st-bg)', borderBottom: '1px solid var(--st-line)' }}>
+          <div className="flex items-center gap-2">
+            <div className="flex flex-1 items-center gap-2 rounded-full px-4 py-2.5" style={{ border: '1px solid var(--st-line)' }}>
+              <NavIcon path="M11 19a8 8 0 100-16 8 8 0 000 16zM21 21l-4.3-4.3" muted small />
+              <input
+                id="plp-search"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Procurar peças, fragrâncias…"
+                className="w-full bg-transparent text-sm focus:outline-none"
+                style={{ color: 'var(--st-text)' }}
+                aria-label="Procurar"
+              />
+              {search && <button onClick={() => setSearch('')} aria-label="Limpar busca" style={{ color: 'var(--st-muted)' }}>✕</button>}
             </div>
+            <button
+              onClick={() => setFiltersOpen((o) => !o)}
+              className="grid h-11 w-11 shrink-0 place-items-center rounded-full"
+              style={{ border: '1px solid var(--st-line)', background: filtersOpen || priceMax !== null || variantFacet ? 'var(--st-primary)' : 'transparent', color: filtersOpen || priceMax !== null || variantFacet ? '#fff' : 'var(--st-text)' }}
+              aria-label="Filtros" aria-expanded={filtersOpen}
+            >
+              <NavIcon path="M4 6h16M7 12h10M10 18h4" active={filtersOpen || priceMax !== null || !!variantFacet} />
+            </button>
           </div>
-        )}
 
-        {/* Cardápio */}
-        {activeCategory === null ? (
-          /* ── Modo browse: carrosséis horizontais por categoria (default) ── */
-          <div className="pt-5 space-y-6">
-            {categories.length === 0 && (
-              <p className="text-center py-12" style={{ color: 'var(--st-muted)' }}>Cardápio em breve.</p>
-            )}
-            {categories.map((cat) => (
-              cat.items.length > 0 && (
-                <section key={cat.id}>
-                  <div className="flex items-center justify-between px-5 mb-3">
-                    <span className="text-white font-bold text-base">{cat.name}</span>
+          {/* Chips de categoria */}
+          {categories.length > 0 && (
+            <div className="mt-3 flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
+              <Chip label="Tudo" active={activeCategory === null} onClick={() => setActiveCategory(null)} />
+              {categories.filter((c) => c.items.length > 0).map((c) => (
+                <Chip key={c.id} label={c.name} active={activeCategory === c.id} onClick={() => setActiveCategory((p) => (p === c.id ? null : c.id))} />
+              ))}
+            </div>
+          )}
+
+          {/* Painel de filtros */}
+          {filtersOpen && (
+            <div className="mt-3 space-y-4 rounded-2xl p-4" style={{ border: '1px solid var(--st-line)' }}>
+              {/* Ordenação */}
+              <div>
+                <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em]" style={{ color: 'var(--st-muted-2)' }}>Ordenar</p>
+                <div className="flex flex-wrap gap-2">
+                  {([['featured', 'Destaques'], ['new', 'Novidades'], ['price_asc', 'Preço ↑'], ['price_desc', 'Preço ↓']] as [SortMode, string][]).map(([m, label]) => (
+                    <Chip key={m} label={label} active={sortMode === m} onClick={() => setSortMode(m)} />
+                  ))}
+                </div>
+              </div>
+
+              {/* Faixa de preço */}
+              {priceBounds.max > priceBounds.min && (
+                <div>
+                  <div className="mb-1 flex items-center justify-between">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em]" style={{ color: 'var(--st-muted-2)' }}>Preço máx.</p>
+                    <span className="text-[12px]" style={{ color: 'var(--st-muted)' }}>{mt(priceMax ?? priceBounds.max)}</span>
                   </div>
-                  <div className="flex gap-3 overflow-x-auto pl-5 pr-3 pb-1" style={{ scrollSnapType: 'x proximity', scrollbarWidth: 'none' }}>
-                    {cat.items.map((item) => (
-                      <div key={item.id} style={{ scrollSnapAlign: 'start' }}>
-                        <FoodCard item={item} carousel />
-                      </div>
+                  <input
+                    type="range"
+                    min={priceBounds.min}
+                    max={priceBounds.max}
+                    step={Math.max(100, Math.round((priceBounds.max - priceBounds.min) / 40))}
+                    value={priceMax ?? priceBounds.max}
+                    onChange={(e) => { const v = Number(e.target.value); setPriceMax(v >= priceBounds.max ? null : v); }}
+                    className="w-full accent-[var(--st-primary)]"
+                    aria-label="Preço máximo"
+                  />
+                </div>
+              )}
+
+              {/* Facet de variante (só se existir no catálogo) */}
+              {variantNames.length > 0 && (
+                <div>
+                  <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em]" style={{ color: 'var(--st-muted-2)' }}>Variante</p>
+                  <div className="flex flex-wrap gap-2">
+                    {variantNames.map((n) => (
+                      <Chip key={n} label={n} active={variantFacet === n} onClick={() => setVariantFacet((p) => (p === n ? null : n))} />
                     ))}
                   </div>
-                </section>
-              )
+                </div>
+              )}
+
+              {filtersActive && (
+                <button onClick={clearFilters} className="text-[12px] font-semibold underline" style={{ color: 'var(--st-primary-2)' }}>Limpar filtros</button>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* ── Vitrine: Home curada (sem filtros) OU grelha PLP (com filtros) ── */}
+        {!filtersActive ? (
+          <div className="space-y-9 pt-7">
+            {categories.length === 0 && <p className="py-16 text-center" style={{ color: 'var(--st-muted)' }}>Coleção em breve.</p>}
+            {categories.map((cat) => cat.items.length > 0 && (
+              <section key={cat.id}>
+                <div className="mb-3.5 flex items-end justify-between px-5">
+                  <h2 className="text-[17px] font-semibold tracking-tight">{cat.name}</h2>
+                  <button onClick={() => setActiveCategory(cat.id)} className="text-[11px] font-semibold uppercase tracking-[0.12em]" style={{ color: 'var(--st-muted-2)' }}>Ver tudo</button>
+                </div>
+                <div className="flex gap-3.5 overflow-x-auto px-5 pb-1" style={{ scrollSnapType: 'x proximity', scrollbarWidth: 'none' }}>
+                  {cat.items.map((item) => (
+                    <div key={item.id} style={{ scrollSnapAlign: 'start' }} className="w-[46%] shrink-0 max-w-[190px]">
+                      <ProductCard item={item} fav={favorites.has(item.id)} onToggleFav={() => toggleFav(item.id)} onOpen={() => openProduct(item)} onQuickAdd={() => (hasOptions(item) ? openProduct(item) : quickAdd(item))} />
+                    </div>
+                  ))}
+                </div>
+              </section>
             ))}
           </div>
         ) : (
-          /* ── Modo filtro: só a categoria seleccionada, grid vertical ── */
-          (() => {
-            const cat = categories.find((c) => c.id === activeCategory);
-            if (!cat) return null;
-            return (
-              <div className="pt-4">
-                <div className="flex items-center justify-between px-4 mb-4">
-                  <span className="text-white font-bold text-base">{cat.name}</span>
-                  <button
-                    onClick={() => setActiveCategory(null)}
-                    className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full"
-                    style={{ border: '1px solid var(--st-line)', color: 'var(--st-muted)' }}
-                  >
-                    ✕ Ver tudo
-                  </button>
-                </div>
-                <div className="flex flex-col gap-0 px-4">
-                  {cat.items.map((item) => <ListCard key={item.id} item={item} />)}
-                </div>
+          <div className="px-5 pt-6">
+            <p className="mb-4 text-[12px]" style={{ color: 'var(--st-muted)' }}>{filteredItems.length} {filteredItems.length === 1 ? 'produto' : 'produtos'}</p>
+            {filteredItems.length === 0 ? (
+              <div className="py-16 text-center">
+                <p style={{ color: 'var(--st-muted)' }}>Nada encontrado com estes filtros.</p>
+                <button onClick={clearFilters} className="mt-2 text-[13px] font-semibold underline" style={{ color: 'var(--st-primary-2)' }}>Limpar filtros</button>
               </div>
-            );
-          })()
+            ) : (
+              <div className="grid grid-cols-2 gap-x-4 gap-y-7">
+                {filteredItems.map((item) => (
+                  <ProductCard key={item.id} item={item} fav={favorites.has(item.id)} onToggleFav={() => toggleFav(item.id)} onOpen={() => openProduct(item)} onQuickAdd={() => (hasOptions(item) ? openProduct(item) : quickAdd(item))} />
+                ))}
+              </div>
+            )}
+          </div>
         )}
       </div>
 
-      {/* Barra flutuante do carrinho */}
-      {count > 0 && !cartOpen && (
+      {/* Barra flutuante da sacola */}
+      {count > 0 && !cartOpen && !product && (
         <button
           onClick={() => setCartOpen(true)}
-          className="glass-cta fixed bottom-[88px] left-1/2 -translate-x-1/2 z-20 w-[calc(100%-2rem)] max-w-[448px] text-white font-bold py-3.5 px-5 rounded-2xl flex items-center justify-between"
+          className="fixed bottom-[86px] left-1/2 z-20 flex w-[calc(100%-2.5rem)] max-w-[440px] -translate-x-1/2 items-center justify-between rounded-full px-6 py-3.5 text-[13px] font-semibold uppercase tracking-[0.1em] text-white"
+          style={{ background: 'var(--st-grad)' }}
         >
-          <span className="flex items-center gap-2">
-            <span className="bg-black/30 rounded-full w-6 h-6 grid place-items-center text-sm">{count}</span>
-            Ver carrinho
-          </span>
+          <span className="flex items-center gap-2"><span className="grid h-5 w-5 place-items-center rounded-full bg-white/25 text-[11px]">{count}</span>Ver sacola</span>
           <span>{mt(subtotal)}</span>
         </button>
       )}
 
       {/* Bottom nav */}
-      <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 z-20 w-full max-w-[480px] flex" style={{ background: '#0f0f0f', borderTop: '1px solid var(--st-line)', paddingBottom: 18 }}>
+      <nav className="fixed bottom-0 left-1/2 z-20 flex w-full max-w-[480px] -translate-x-1/2" style={{ background: 'var(--st-bg)', borderTop: '1px solid var(--st-line)', paddingBottom: 16 }}>
         {NAV.map((n) => (
-          <button key={n.id} onClick={n.onClick} className="flex-1 flex flex-col items-center gap-1 pt-2.5 pb-1.5">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={n.active ? 'var(--st-primary)' : '#555'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d={n.path} /></svg>
-            <span className="text-[10px]" style={{ color: n.active ? 'var(--st-primary)' : '#555', fontWeight: n.active ? 700 : 400 }}>{n.label}</span>
+          <button key={n.id} onClick={n.onClick} className="flex flex-1 flex-col items-center gap-1 pb-1.5 pt-2.5">
+            <NavIcon path={n.path} active={!!n.active} />
+            <span className="text-[10px]" style={{ color: n.active ? 'var(--st-primary)' : 'var(--st-muted)', fontWeight: n.active ? 600 : 400 }}>{n.label}</span>
           </button>
         ))}
       </nav>
 
-      {/* Drawer do carrinho */}
+      {/* Drawer da sacola */}
       {cartOpen && (
         <div className="fixed inset-0 z-30 flex flex-col justify-end" role="dialog" aria-modal="true">
-          <div className="absolute inset-0 bg-black/60" onClick={() => setCartOpen(false)} />
-          <div className="relative rounded-t-3xl max-h-[85vh] flex flex-col w-full max-w-[480px] mx-auto" style={{ background: 'var(--st-card)', borderTop: '1px solid var(--st-line)' }}>
-            <div className="flex items-center justify-between p-4 border-b" style={{ borderColor: 'var(--st-line)' }}>
-              <h2 className="text-white font-bold text-lg">Meu Carrinho</h2>
+          <div className="absolute inset-0" style={{ background: 'rgba(20,20,20,0.4)' }} onClick={() => setCartOpen(false)} />
+          <div className="relative mx-auto flex max-h-[85vh] w-full max-w-[480px] flex-col rounded-t-3xl" style={{ background: 'var(--st-bg)' }}>
+            <div className="flex items-center justify-between border-b p-4" style={{ borderColor: 'var(--st-line)' }}>
+              <h2 className="text-lg font-semibold">Minha sacola</h2>
               <button onClick={() => setCartOpen(false)} className="text-xl" style={{ color: 'var(--st-muted)' }} aria-label="Fechar">✕</button>
             </div>
 
-            <div className="overflow-y-auto p-4 space-y-3 flex-1">
-              {cart.length === 0 && <p className="text-center py-8" style={{ color: 'var(--st-muted)' }}>Carrinho vazio</p>}
+            <div className="flex-1 space-y-3 overflow-y-auto p-4">
+              {cart.length === 0 && <p className="py-10 text-center" style={{ color: 'var(--st-muted)' }}>Sacola vazia</p>}
               {cart.map((line, idx) => {
                 const isGift = giftItemIds.has(line.menuItemId);
                 const it = lineDetail(line.menuItemId);
@@ -717,13 +616,13 @@ export default function MenuPage() {
 
                 if (isGift) {
                   return (
-                    <div key={idx} className="flex items-center gap-3 rounded-2xl p-3" style={{ background: '#0f2a1a', border: '1px solid #22c55e44' }}>
-                      <div className="w-14 h-14 rounded-xl grid place-items-center text-3xl shrink-0" style={{ background: '#163d24' }}>🎁</div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-white font-semibold truncate">{refResult?.gift_item_name ?? 'Brinde'}</p>
-                        <p className="text-sm font-bold" style={{ color: '#22c55e' }}>GRÁTIS</p>
+                    <div key={idx} className="flex items-center gap-3 rounded-2xl p-3" style={{ background: '#f2f8f3', border: '1px solid #cfe6d4' }}>
+                      <div className="grid h-14 w-14 shrink-0 place-items-center rounded-xl text-3xl" style={{ background: '#e6f2e9' }}>🎁</div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-medium">{refResult?.gift_item_name ?? 'Brinde'}</p>
+                        <p className="text-sm font-semibold" style={{ color: '#16a34a' }}>Grátis</p>
                       </div>
-                      <button onClick={() => setQtyByIndex(idx, 0)} className="w-6 h-6 grid place-items-center text-sm" style={{ color: 'var(--st-muted)' }} aria-label="Remover brinde">✕</button>
+                      <button onClick={() => setQtyByIndex(idx, 0)} className="text-sm" style={{ color: 'var(--st-muted)' }} aria-label="Remover brinde">✕</button>
                     </div>
                   );
                 }
@@ -732,181 +631,150 @@ export default function MenuPage() {
                 const addons = (it!.addons ?? []).filter((a) => (line.addonIds ?? []).includes(a.id));
                 const unit = lineUnitPrice(it!, line.variantId, line.addonIds);
                 return (
-                  <div key={idx} className="flex items-center gap-3 rounded-2xl p-3" style={{ background: '#111', border: '1px solid var(--st-line)' }}>
-                    <div className="relative w-14 h-14 rounded-xl overflow-hidden shrink-0">
-                      <Image src={imgFor(it!, globalIndex(it!.id))} alt={it!.name} fill sizes="56px" className="object-cover" />
+                  <div key={idx} className="flex items-center gap-3 rounded-2xl p-3" style={{ border: '1px solid var(--st-line)' }}>
+                    <div className="relative h-16 w-14 shrink-0 overflow-hidden rounded-xl" style={{ background: 'var(--st-card)' }}>
+                      <SmartImage src={it!.photo_url} alt={it!.name} monogram={it!.name} />
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-white font-semibold truncate">{it!.name}</p>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-medium">{it!.name}</p>
                       {(variant || addons.length > 0) && (
-                        <p className="text-[11px] truncate" style={{ color: 'var(--st-muted)' }}>
-                          {[variant?.name, ...addons.map((a) => a.name)].filter(Boolean).join(' · ')}
-                        </p>
+                        <p className="truncate text-[11px]" style={{ color: 'var(--st-muted)' }}>{[variant?.name, ...addons.map((a) => a.name)].filter(Boolean).join(' · ')}</p>
                       )}
-                      <p className="text-sm" style={{ color: 'var(--st-primary)' }}>{mt(unit * line.qty)}</p>
+                      <p className="mt-0.5 text-sm font-semibold">{mt(unit * line.qty)}</p>
                     </div>
-                    <div className="flex items-center gap-1.5 rounded-full px-1 py-0.5 shrink-0" style={{ background: '#111', border: '1px solid var(--st-line)' }}>
-                      <button onClick={() => setQtyByIndex(idx, line.qty - 1)} className="w-6 h-6 grid place-items-center text-white font-bold" aria-label="Diminuir">−</button>
-                      <span className="text-white text-sm font-bold w-4 text-center">{line.qty}</span>
-                      <button onClick={() => setQtyByIndex(idx, line.qty + 1)} className="w-6 h-6 grid place-items-center font-bold" style={{ color: 'var(--st-primary)' }} aria-label="Aumentar">+</button>
+                    <div className="flex shrink-0 items-center rounded-full" style={{ border: '1px solid var(--st-line)' }}>
+                      <button onClick={() => setQtyByIndex(idx, line.qty - 1)} className="grid h-8 w-8 place-items-center" aria-label="Diminuir">−</button>
+                      <span className="w-5 text-center text-sm font-semibold">{line.qty}</span>
+                      <button onClick={() => setQtyByIndex(idx, line.qty + 1)} className="grid h-8 w-8 place-items-center" aria-label="Aumentar">+</button>
                     </div>
                   </div>
                 );
               })}
             </div>
 
-            <div className="p-4 border-t space-y-3" style={{ borderColor: 'var(--st-line)' }}>
-              <div className="flex justify-between text-white">
+            <div className="space-y-3 border-t p-4" style={{ borderColor: 'var(--st-line)' }}>
+              <div className="flex justify-between">
                 <span style={{ color: 'var(--st-muted)' }}>Subtotal</span>
-                <span className="font-bold">{mt(subtotal)}</span>
+                <span className="font-semibold">{mt(subtotal)}</span>
               </div>
-              <p className="text-xs" style={{ color: 'var(--st-muted)' }}>Taxa de entrega calculada no checkout.</p>
+              <p className="text-xs" style={{ color: 'var(--st-muted)' }}>Entrega calculada no checkout.</p>
               <div className="flex gap-2">
-                <button onClick={() => { clear(); setCartOpen(false); }} className="px-4 py-3 rounded-2xl text-sm" style={{ border: '1px solid var(--st-line)', color: 'var(--st-muted-2)' }}>Limpar</button>
-                <button onClick={() => router.push('/checkout')} disabled={cart.length === 0} className="flex-1 text-white font-bold py-3 px-4 rounded-2xl disabled:opacity-50" style={{ background: 'var(--st-grad)' }}>Finalizar pedido</button>
+                <button onClick={() => { clear(); setCartOpen(false); }} className="rounded-full px-5 py-3 text-sm" style={{ border: '1px solid var(--st-line)', color: 'var(--st-muted-2)' }}>Limpar</button>
+                <button onClick={() => router.push('/checkout')} disabled={cart.length === 0} className="flex-1 rounded-full py-3 text-sm font-semibold uppercase tracking-[0.1em] text-white disabled:opacity-40" style={{ background: 'var(--st-grad)' }}>Finalizar</button>
               </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* Produto (F2) — overlay full-screen, fiel ao schema plano (sem variantes) */}
+      {/* PDP */}
       {product && (
-        <div className="fixed inset-0 z-40" style={{ background: 'rgba(0,0,0,0.4)' }}>
-          <div className="mx-auto w-full max-w-[480px] h-full flex flex-col" style={{ background: 'var(--st-bg)' }}>
-            {/* hero */}
-            <div className="relative h-[280px] shrink-0">
-              <Image src={imgFor(product, globalIndex(product.id))} alt={product.name} fill sizes="(max-width:480px) 100vw, 480px" className="object-cover" />
-              <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, rgba(0,0,0,0.25) 0%, rgba(0,0,0,0) 40%, rgba(10,5,2,0.7) 100%)' }} />
-              <button onClick={() => setProduct(null)} className="absolute top-3 left-3.5 w-9 h-9 rounded-full grid place-items-center text-white text-xl" style={{ background: 'rgba(0,0,0,0.5)' }} aria-label="Voltar">‹</button>
-              <button onClick={() => toggleFav(product.id)} className="absolute top-3 right-3.5 w-9 h-9 rounded-full grid place-items-center text-lg" style={{ background: 'rgba(0,0,0,0.5)', color: favorites.has(product.id) ? 'var(--st-primary)' : '#ddd' }} aria-label="Favorito">{favorites.has(product.id) ? '♥' : '♡'}</button>
-            </div>
-
-            {/* conteúdo */}
-            <div className="flex-1 overflow-y-auto px-5 pt-5">
-              <h2 className="text-white font-black text-[28px] leading-tight mb-2">{product.name}</h2>
-              {categoryOf(product.id) && (
-                <span className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 mb-3 text-[11.5px] font-bold" style={{ background: 'rgba(255,95,48,0.13)', border: '1px solid rgba(255,95,48,0.3)', color: '#ff6535' }}>🔥 {categoryOf(product.id)}</span>
-              )}
-              {product.description && <p className="text-[13px] leading-relaxed mb-4" style={{ color: 'var(--st-muted-2)' }}>{product.description}</p>}
-
-              {/* Tamanho (variantes) — escolha única. Só aparece se o item tiver variantes. */}
-              {product.variants && product.variants.length > 0 && (
-                <div className="mb-5">
-                  <p className="text-white font-bold text-sm mb-2.5">Escolha o tamanho</p>
-                  <div className="space-y-2" style={{ perspective: '1000px' }}>
-                    {product.variants.map((v) => {
-                      const sel = selVariant === v.id;
-                      return (
-                        <button
-                          key={v.id}
-                          type="button"
-                          onClick={() => setSelVariant(v.id)}
-                          aria-pressed={sel}
-                          className={`glass-opt w-full flex items-center justify-between px-4 py-3${sel ? ' is-selected' : ''}`}
-                        >
-                          <span className="glass-label text-sm">{v.name}</span>
-                          <span className="flex items-center gap-2">
-                            <span className="text-white font-bold text-sm">{mt(v.price_cents)}</span>
-                            {sel && <span className="w-5 h-5 rounded-full grid place-items-center text-white text-[11px] font-bold" style={{ background: 'var(--st-grad)' }}>✓</span>}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* Adicionais — multi-seleção (upsell). Só aparece se o item tiver adicionais. */}
-              {product.addons && product.addons.length > 0 && (
-                <div className="mb-5">
-                  <p className="text-white font-bold text-sm mb-2.5">Adicionais</p>
-                  <div className="flex flex-wrap gap-2" style={{ perspective: '1000px' }}>
-                    {product.addons.map((a) => {
-                      const sel = selAddons.includes(a.id);
-                      return (
-                        <button
-                          key={a.id}
-                          type="button"
-                          onClick={() => setSelAddons((prev) => sel ? prev.filter((x) => x !== a.id) : [...prev, a.id])}
-                          aria-pressed={sel}
-                          className={`glass-opt pill px-3.5 py-2 text-[12.5px]${sel ? ' is-selected' : ''}`}
-                        >
-                          <span className="glass-label">{sel ? '✓ ' : '+ '}{a.name}</span>
-                          <span className="ml-1" style={{ color: 'var(--st-primary)' }}>+{mt(a.price_cents)}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              <div className="flex items-baseline gap-1 mb-5">
-                <span className="text-white font-black text-4xl">{mt(lineUnitPrice(product, selVariant, selAddons))}</span>
-              </div>
-            </div>
-
-            {/* barra adicionar */}
-            <div className="shrink-0 flex items-center gap-3 px-4 pt-2.5 pb-4 border-t" style={{ borderColor: 'var(--st-line)' }}>
-              <div className="flex items-center rounded-xl overflow-hidden" style={{ background: 'var(--st-card)', border: '1px solid var(--st-line)' }}>
-                <button onClick={() => setProductQty((q) => Math.max(1, q - 1))} className="w-10 h-11 grid place-items-center text-white text-xl" aria-label="Diminuir">−</button>
-                <span className="w-6 text-center text-white font-extrabold">{productQty}</span>
-                <button onClick={() => setProductQty((q) => q + 1)} className="w-10 h-11 grid place-items-center text-white text-xl" aria-label="Aumentar">+</button>
-              </div>
-              <button
-                onClick={() => {
-                  const unit = lineUnitPrice(product, selVariant, selAddons);
-                  add(product.id, productQty, { variantId: selVariant, addonIds: selAddons });
-                  trackAddToCart({ id: product.id, name: product.name, price_cents: unit, qty: productQty });
-                  const name = product.name;
-                  setProduct(null);
-                  setToast(`${productQty}× ${name} no carrinho`);
-                }}
-                className="flex-1 h-11 rounded-xl text-white font-extrabold text-[12.5px] tracking-wide grid place-items-center"
-                style={{ background: 'var(--st-grad)' }}
-              >ADICIONAR AO CARRINHO 🛒</button>
-            </div>
-          </div>
-        </div>
+        <ProductDetail
+          item={product}
+          categoryLabel={categoryOf(product.id)}
+          isFav={favorites.has(product.id)}
+          onToggleFav={() => toggleFav(product.id)}
+          onAddToCart={onAddFromPDP}
+          onClose={() => setProduct(null)}
+          onOpenItem={openProductById}
+        />
       )}
 
-      {/* Conta (F7): identificar / Meus Pedidos / Perfil */}
+      {/* Conta (F7) */}
       {account === 'identify' && <IdentifyModal onClose={() => setAccount(null)} onSubmit={onIdentified} />}
-      {account === 'orders' && (
-        <OrdersOverlay orders={myOrders} onClose={() => setAccount(null)} onOpen={(id) => router.push(`/order-status/${id}`)} onReorder={reorder} />
-      )}
+      {account === 'orders' && <OrdersOverlay orders={myOrders} onClose={() => setAccount(null)} onOpen={(id) => router.push(`/order-status/${id}`)} onReorder={reorder} />}
       {account === 'profile' && customer && (
-        <ProfileOverlay customer={customer} onClose={() => setAccount(null)} onLogout={logout} onReorder={reorder}
-          onOrders={() => { setAccount('orders'); if (phone) loadMyOrders(phone); }} />
+        <ProfileOverlay customer={customer} onClose={() => setAccount(null)} onLogout={logout} onReorder={reorder} onOrders={() => { setAccount('orders'); if (phone) loadMyOrders(phone); }} />
       )}
 
       {/* Toast */}
       {toast && (
-        <div className="fixed bottom-[96px] left-1/2 -translate-x-1/2 z-[60] rounded-full px-4 py-2 text-sm text-white" style={{ background: 'rgba(0,0,0,0.85)', border: '1px solid var(--st-line)' }}>
-          {toast}
-        </div>
+        <div className="fixed bottom-[96px] left-1/2 z-[60] -translate-x-1/2 rounded-full px-4 py-2 text-sm text-white" style={{ background: 'rgba(20,20,20,0.92)' }}>{toast}</div>
       )}
     </Shell>
+  );
+}
+
+// ── Ícone SVG de traço ────────────────────────────────────────────────────────
+function NavIcon({ path, active, muted, small }: { path: string; active?: boolean; muted?: boolean; small?: boolean }) {
+  const size = small ? 16 : 22;
+  const stroke = active ? 'var(--st-primary)' : muted ? 'var(--st-muted)' : 'var(--st-muted-2)';
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d={path} /></svg>
+  );
+}
+
+// ── Chip de filtro ────────────────────────────────────────────────────────────
+function Chip({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className="shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-[12.5px] font-medium transition-colors"
+      style={active
+        ? { background: 'var(--st-primary)', color: '#fff', border: '1px solid var(--st-primary)' }
+        : { background: 'transparent', color: 'var(--st-text)', border: '1px solid var(--st-line)' }}
+      aria-pressed={active}
+    >
+      {label}
+    </button>
+  );
+}
+
+// ── Card de produto (boutique claro) ──────────────────────────────────────────
+function ProductCard({ item, fav, onToggleFav, onOpen, onQuickAdd }: { item: MenuItem; fav: boolean; onToggleFav: () => void; onOpen: () => void; onQuickAdd: () => void }) {
+  return (
+    <div className="group">
+      <button onClick={onOpen} className="block w-full text-left" aria-label={item.name}>
+        <div className="relative overflow-hidden rounded-2xl" style={{ aspectRatio: '3 / 4', background: 'var(--st-card)', border: '1px solid var(--st-line)' }}>
+          <SmartImage src={item.photo_url} alt={item.name} monogram={item.name} rounded="rounded-2xl" />
+          <span
+            role="button" tabIndex={0}
+            onClick={(e) => { e.stopPropagation(); onToggleFav(); }}
+            onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); onToggleFav(); } }}
+            className="absolute right-2.5 top-2.5 grid h-8 w-8 place-items-center rounded-full text-[15px]"
+            style={{ background: 'rgba(255,255,255,0.9)', color: fav ? 'var(--st-primary-2)' : 'var(--st-text)' }}
+            aria-label="Favorito"
+          >{fav ? '♥' : '♡'}</span>
+        </div>
+      </button>
+      <div className="mt-2.5 flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <button onClick={onOpen} className="block truncate text-left text-[13.5px] font-medium">{item.name}</button>
+          <p className="mt-0.5 text-[13px]" style={{ color: 'var(--st-muted-2)' }}>
+            {hasOptions(item) && <span className="text-[11px]" style={{ color: 'var(--st-muted)' }}>desde </span>}
+            {mt(item.price_cents)}
+          </p>
+        </div>
+        <button
+          onClick={onQuickAdd}
+          className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-white"
+          style={{ background: 'var(--st-grad)' }}
+          aria-label={hasOptions(item) ? `Escolher opções de ${item.name}` : `Adicionar ${item.name} à sacola`}
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+        </button>
+      </div>
+    </div>
   );
 }
 
 // Coluna app centrada (mobile-first; centrada no desktop)
 function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="relative mx-auto w-full max-w-[480px] min-h-screen" style={{ background: 'var(--st-bg)', fontFamily: 'var(--font-store)' }}>
+    <div className="relative mx-auto min-h-screen w-full max-w-[480px]" style={{ background: 'var(--st-bg)', color: 'var(--st-text)', fontFamily: 'var(--font-store)' }}>
       {children}
     </div>
   );
 }
 
-// ── Conta (F7): wrapper de overlay full-screen ────────────────────────────────
+// ── Conta (F7): overlay full-screen (claro) ───────────────────────────────────
 function Overlay({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   return (
-    <div className="fixed inset-0 z-50" style={{ background: 'rgba(0,0,0,0.4)' }}>
-      <div className="mx-auto w-full max-w-[480px] h-full flex flex-col" style={{ background: 'var(--st-bg)' }}>
-        <header className="flex items-center gap-3 px-4 py-4 border-b shrink-0" style={{ borderColor: 'var(--st-line)' }}>
-          <button onClick={onClose} className="text-2xl text-white leading-none" aria-label="Voltar">←</button>
-          <h1 className="text-xl font-extrabold text-white">{title}</h1>
+    <div className="fixed inset-0 z-50" style={{ background: 'rgba(20,20,20,0.35)' }}>
+      <div className="mx-auto flex h-full w-full max-w-[480px] flex-col" style={{ background: 'var(--st-bg)', color: 'var(--st-text)' }}>
+        <header className="flex shrink-0 items-center gap-3 border-b px-4 py-4" style={{ borderColor: 'var(--st-line)' }}>
+          <button onClick={onClose} className="text-2xl leading-none" aria-label="Voltar">←</button>
+          <h1 className="text-xl font-semibold">{title}</h1>
         </header>
         <div className="flex-1 overflow-y-auto p-4">{children}</div>
       </div>
@@ -914,12 +782,12 @@ function Overlay({ title, onClose, children }: { title: string; onClose: () => v
   );
 }
 
-// Identificação soft (telefone, sem OTP). DECISÃO: só mostramos resumos deste telefone (CLAUDE §9).
 function IdentifyModal({ onClose, onSubmit }: { onClose: () => void; onSubmit: (phone: string, name?: string) => void | Promise<void> }) {
   const [phone, setPhone] = useState('');
   const [name, setName] = useState('');
   const [busy, setBusy] = useState(false);
-  const input = 'w-full rounded-xl p-3 text-white placeholder:text-[var(--st-muted)] focus:outline-none focus:border-[var(--st-primary)] border border-[var(--st-line)] bg-black/30';
+  const input = 'w-full rounded-xl p-3 focus:outline-none';
+  const inputStyle = { border: '1px solid var(--st-line)', color: 'var(--st-text)' } as React.CSSProperties;
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (phone.trim().length < 6) return;
@@ -928,17 +796,17 @@ function IdentifyModal({ onClose, onSubmit }: { onClose: () => void; onSubmit: (
     setBusy(false);
   };
   return (
-    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-[4px] flex items-end sm:items-center justify-center">
-      <div className="w-full max-w-[480px] rounded-t-3xl sm:rounded-3xl p-6" style={{ background: 'var(--st-card)', border: '1px solid var(--st-line)' }}>
-        <div className="flex items-center justify-between mb-1">
-          <h2 className="text-white font-extrabold text-xl">Entrar</h2>
+    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" style={{ background: 'rgba(20,20,20,0.5)' }}>
+      <div className="w-full max-w-[480px] rounded-t-3xl p-6 sm:rounded-3xl" style={{ background: 'var(--st-bg)', color: 'var(--st-text)' }}>
+        <div className="mb-1 flex items-center justify-between">
+          <h2 className="text-xl font-semibold">Entrar</h2>
           <button onClick={onClose} className="text-xl" style={{ color: 'var(--st-muted)' }} aria-label="Fechar">✕</button>
         </div>
-        <p className="text-sm mb-5" style={{ color: 'var(--st-muted)' }}>Identifica-te com o teu telefone para veres os teus pedidos e favoritos.</p>
+        <p className="mb-5 text-sm" style={{ color: 'var(--st-muted)' }}>Identifica-te com o teu telefone para veres os teus pedidos e favoritos.</p>
         <form onSubmit={submit} className="space-y-3">
-          <input value={phone} onChange={(e) => setPhone(e.target.value)} type="tel" placeholder="Telefone (+258 …)" className={input} required />
-          <input value={name} onChange={(e) => setName(e.target.value)} type="text" placeholder="Nome (opcional)" className={input} />
-          <button type="submit" disabled={busy || phone.trim().length < 6} className="w-full text-white font-extrabold py-3.5 rounded-2xl disabled:opacity-50" style={{ background: 'var(--st-grad)' }}>{busy ? 'A entrar…' : 'Entrar'}</button>
+          <input value={phone} onChange={(e) => setPhone(e.target.value)} type="tel" placeholder="Telefone (+258 …)" className={input} style={inputStyle} required />
+          <input value={name} onChange={(e) => setName(e.target.value)} type="text" placeholder="Nome (opcional)" className={input} style={inputStyle} />
+          <button type="submit" disabled={busy || phone.trim().length < 6} className="w-full rounded-full py-3.5 font-semibold uppercase tracking-[0.1em] text-white disabled:opacity-40" style={{ background: 'var(--st-grad)' }}>{busy ? 'A entrar…' : 'Entrar'}</button>
           <button type="button" onClick={onClose} className="w-full py-2 text-sm" style={{ color: 'var(--st-muted)' }}>Agora não</button>
         </form>
       </div>
@@ -946,29 +814,26 @@ function IdentifyModal({ onClose, onSubmit }: { onClose: () => void; onSubmit: (
   );
 }
 
-// Meus Pedidos (resumos por telefone; "pedir de novo")
 function OrdersOverlay({ orders, onClose, onOpen, onReorder }: { orders: CustomerOrder[] | null; onClose: () => void; onOpen: (id: string) => void; onReorder: (items: ReorderItem[]) => void }) {
   const all = orders ?? [];
   const active = all.filter((o) => isActiveOrder(o.status));
   const history = all.filter((o) => !isActiveOrder(o.status));
   const Card = (o: CustomerOrder) => {
-    const m = ORDER_STATUS[o.status] ?? { label: o.status, color: '#888' };
+    const m = ORDER_STATUS[o.status] ?? { label: o.status, color: 'var(--st-muted)' };
     return (
-      <div key={o.id} className="rounded-2xl p-3.5" style={{ background: 'var(--st-card)', border: '1px solid var(--st-line)' }}>
+      <div key={o.id} className="rounded-2xl p-3.5" style={{ border: '1px solid var(--st-line)' }}>
         <div className="flex items-start justify-between">
           <button onClick={() => onOpen(o.id)} className="text-left">
-            <div className="font-mono font-bold text-white">{o.order_number}</div>
-            <div className="text-[11px]" style={{ color: 'var(--st-muted)' }}>
-              {new Date(o.created_at).toLocaleDateString('pt-MZ', { day: '2-digit', month: 'short', year: 'numeric' })} · {o.items.reduce((s, it) => s + it.qty, 0)} itens
-            </div>
+            <div className="font-mono font-semibold">{o.order_number}</div>
+            <div className="text-[11px]" style={{ color: 'var(--st-muted)' }}>{new Date(o.created_at).toLocaleDateString('pt-MZ', { day: '2-digit', month: 'short', year: 'numeric' })} · {o.items.reduce((s, it) => s + it.qty, 0)} itens</div>
           </button>
-          <span className="text-xs font-bold inline-flex items-center gap-1.5" style={{ color: m.color }}><span className="w-2 h-2 rounded-full bg-current" />{m.label}</span>
+          <span className="inline-flex items-center gap-1.5 text-xs font-semibold" style={{ color: m.color }}><span className="h-2 w-2 rounded-full bg-current" />{m.label}</span>
         </div>
-        <div className="flex items-center justify-between mt-2.5">
-          <span className="text-white font-extrabold">{mt(o.total_cents)}</span>
+        <div className="mt-2.5 flex items-center justify-between">
+          <span className="font-semibold">{mt(o.total_cents)}</span>
           <div className="flex gap-2">
-            <button onClick={() => onOpen(o.id)} className="text-xs font-semibold rounded-xl px-3 py-1.5" style={{ border: '1px solid var(--st-line)', color: 'var(--st-muted-2)' }}>Acompanhar</button>
-            <button onClick={() => onReorder(o.items)} className="text-xs font-semibold rounded-xl px-3 py-1.5 text-white" style={{ background: 'var(--st-grad)' }}>↻ Repetir</button>
+            <button onClick={() => onOpen(o.id)} className="rounded-full px-3 py-1.5 text-xs font-semibold" style={{ border: '1px solid var(--st-line)', color: 'var(--st-muted-2)' }}>Acompanhar</button>
+            <button onClick={() => onReorder(o.items)} className="rounded-full px-3 py-1.5 text-xs font-semibold text-white" style={{ background: 'var(--st-grad)' }}>↻ Repetir</button>
           </div>
         </div>
       </div>
@@ -977,61 +842,60 @@ function OrdersOverlay({ orders, onClose, onOpen, onReorder }: { orders: Custome
   return (
     <Overlay title="Meus Pedidos" onClose={onClose}>
       {orders === null ? (
-        <p className="text-center py-10" style={{ color: 'var(--st-muted)' }}>A carregar…</p>
+        <p className="py-10 text-center" style={{ color: 'var(--st-muted)' }}>A carregar…</p>
       ) : all.length === 0 ? (
-        <p className="text-center py-10" style={{ color: 'var(--st-muted)' }}>Ainda não há pedidos com este telefone.</p>
+        <p className="py-10 text-center" style={{ color: 'var(--st-muted)' }}>Ainda não há pedidos com este telefone.</p>
       ) : (
         <div className="space-y-5">
-          {active.length > 0 && <div><h3 className="text-white font-bold mb-2">Ativos</h3><div className="space-y-2.5">{active.map(Card)}</div></div>}
-          {history.length > 0 && <div><h3 className="text-white font-bold mb-2">Histórico</h3><div className="space-y-2.5">{history.map(Card)}</div></div>}
+          {active.length > 0 && <div><h3 className="mb-2 font-semibold">Ativos</h3><div className="space-y-2.5">{active.map(Card)}</div></div>}
+          {history.length > 0 && <div><h3 className="mb-2 font-semibold">Histórico</h3><div className="space-y-2.5">{history.map(Card)}</div></div>}
         </div>
       )}
     </Overlay>
   );
 }
 
-// Perfil (resumo + favoritos + sair)
 function ProfileOverlay({ customer, onClose, onLogout, onOrders, onReorder }: { customer: CustomerSummary; onClose: () => void; onLogout: () => void; onOrders: () => void; onReorder: (items: ReorderItem[]) => void }) {
   const initial = (customer.name || customer.phone || '?').trim()[0]?.toUpperCase() ?? '?';
   return (
     <Overlay title="Perfil" onClose={onClose}>
-      <div className="flex items-center gap-3 mb-5">
-        <div className="w-14 h-14 rounded-full grid place-items-center text-white text-xl font-extrabold" style={{ background: 'var(--st-grad)' }}>{initial}</div>
+      <div className="mb-5 flex items-center gap-3">
+        <div className="grid h-14 w-14 place-items-center rounded-full text-xl font-semibold text-white" style={{ background: 'var(--st-grad)' }}>{initial}</div>
         <div>
-          <div className="text-white font-extrabold text-lg">{customer.name || 'Cliente'}</div>
+          <div className="text-lg font-semibold">{customer.name || 'Cliente'}</div>
           <div className="text-sm" style={{ color: 'var(--st-muted)' }}>{customer.phone}</div>
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-3 mb-5">
-        <div className="rounded-2xl p-3.5 text-center" style={{ background: 'var(--st-card)', border: '1px solid var(--st-line)' }}>
-          <div className="text-white font-extrabold text-xl">{customer.orders_count}</div>
+      <div className="mb-5 grid grid-cols-2 gap-3">
+        <div className="rounded-2xl p-3.5 text-center" style={{ border: '1px solid var(--st-line)' }}>
+          <div className="text-xl font-semibold">{customer.orders_count}</div>
           <div className="text-[11px]" style={{ color: 'var(--st-muted)' }}>Pedidos</div>
         </div>
-        <div className="rounded-2xl p-3.5 text-center" style={{ background: 'var(--st-card)', border: '1px solid var(--st-line)' }}>
-          <div className="text-white font-extrabold text-xl">{mt(customer.total_spent_cents)}</div>
+        <div className="rounded-2xl p-3.5 text-center" style={{ border: '1px solid var(--st-line)' }}>
+          <div className="text-xl font-semibold">{mt(customer.total_spent_cents)}</div>
           <div className="text-[11px]" style={{ color: 'var(--st-muted)' }}>Total gasto</div>
         </div>
       </div>
       {customer.favorites.length > 0 && (
         <div className="mb-5">
-          <h3 className="text-white font-bold mb-2">Os teus favoritos</h3>
+          <h3 className="mb-2 font-semibold">Os teus favoritos</h3>
           <div className="space-y-2">
             {customer.favorites.map((f) => (
-              <div key={f.menu_item_id} className="flex items-center justify-between rounded-xl p-2.5" style={{ background: 'var(--st-card)', border: '1px solid var(--st-line)' }}>
-                <span className="text-white text-sm">{f.name}</span>
-                <button onClick={() => onReorder([{ menu_item_id: f.menu_item_id, qty: 1 }])} className="text-xs font-semibold rounded-xl px-3 py-1.5 text-white" style={{ background: 'var(--st-grad)' }}>+ Adicionar</button>
+              <div key={f.menu_item_id} className="flex items-center justify-between rounded-xl p-2.5" style={{ border: '1px solid var(--st-line)' }}>
+                <span className="text-sm">{f.name}</span>
+                <button onClick={() => onReorder([{ menu_item_id: f.menu_item_id, qty: 1 }])} className="rounded-full px-3 py-1.5 text-xs font-semibold text-white" style={{ background: 'var(--st-grad)' }}>+ Adicionar</button>
               </div>
             ))}
           </div>
         </div>
       )}
-      <button onClick={onOrders} className="w-full rounded-2xl py-3.5 font-semibold mb-2.5 text-white" style={{ background: 'var(--st-card)', border: '1px solid var(--st-line)' }}>Ver os meus pedidos</button>
-      <button onClick={onLogout} className="w-full rounded-2xl py-3.5 font-semibold" style={{ border: '1px solid var(--st-line)', color: 'var(--st-muted)' }}>Sair</button>
+      <button onClick={onOrders} className="mb-2.5 w-full rounded-full py-3.5 font-semibold" style={{ border: '1px solid var(--st-line)' }}>Ver os meus pedidos</button>
+      <button onClick={onLogout} className="w-full rounded-full py-3.5 font-semibold" style={{ border: '1px solid var(--st-line)', color: 'var(--st-muted)' }}>Sair</button>
     </Overlay>
   );
 }
 
-// Loja fechada — lista de espera (reskin The Box)
+// Loja fechada — lista de espera (claro)
 function WaitlistForm() {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -1061,22 +925,22 @@ function WaitlistForm() {
     }
   };
 
-  const inputCls = 'w-full rounded-xl p-3 text-white placeholder-gray-500 focus:outline-none';
-  const inputStyle = { background: '#111', border: '1px solid var(--st-line)' } as React.CSSProperties;
+  const inputCls = 'w-full rounded-xl p-3 focus:outline-none';
+  const inputStyle = { border: '1px solid var(--st-line)', color: 'var(--st-text)' } as React.CSSProperties;
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
+    <div className="flex min-h-screen items-center justify-center p-5">
       <div className="w-full">
-        <div className="rounded-3xl p-6" style={{ background: 'var(--st-card)', border: '1px solid var(--st-line)' }}>
-          <div className="text-center mb-6">
-            <div className="font-black text-sm tracking-[2px] text-white border-2 border-white rounded-md px-2.5 py-1 inline-block mb-4">{ST.logoText}</div>
-            <h1 className="text-2xl font-bold text-white mb-2">Loja Fechada</h1>
-            <p style={{ color: 'var(--st-muted)' }}>Deixe o seu contacto e avisamos quando abrirmos!</p>
+        <div className="rounded-3xl p-6" style={{ border: '1px solid var(--st-line)' }}>
+          <div className="mb-6 text-center">
+            <div className="mb-4 text-[18px] font-semibold tracking-[0.3em]">{ST.logoText}</div>
+            <h1 className="mb-2 text-2xl font-semibold">Loja fechada</h1>
+            <p style={{ color: 'var(--st-muted)' }}>Deixe o seu contacto e avisamos quando abrirmos.</p>
           </div>
           {submitted ? (
-            <div className="text-center py-8">
-              <div className="text-5xl mb-4">✅</div>
-              <p className="text-lg font-semibold" style={{ color: 'var(--st-primary)' }}>Adicionado à lista de espera!</p>
+            <div className="py-8 text-center">
+              <div className="mb-4 text-5xl">✓</div>
+              <p className="text-lg font-semibold" style={{ color: '#16a34a' }}>Adicionado à lista de espera</p>
               <p className="mt-2" style={{ color: 'var(--st-muted)' }}>Avisaremos quando a loja abrir.</p>
             </div>
           ) : (
@@ -1084,14 +948,8 @@ function WaitlistForm() {
               <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Seu nome" className={inputCls} style={inputStyle} required />
               <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+258 84 123 4567" className={inputCls} style={inputStyle} required />
               <textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Alguma observação? (opcional)" rows={3} className={inputCls} style={inputStyle} />
-              {error && (
-                <div className="rounded-xl p-3" style={{ background: 'rgba(232,23,77,0.1)', border: '1px solid rgba(232,23,77,0.3)' }}>
-                  <p className="text-sm text-center" style={{ color: 'var(--st-primary)' }}>{error}</p>
-                </div>
-              )}
-              <button type="submit" disabled={submitting || !name || !phone} className="w-full text-white font-bold py-3 px-4 rounded-2xl disabled:opacity-50" style={{ background: 'var(--st-grad)' }}>
-                {submitting ? 'A enviar…' : 'Adicionar à Lista'}
-              </button>
+              {error && <p className="text-sm" style={{ color: '#dc2626' }}>{error}</p>}
+              <button type="submit" disabled={submitting || !name || !phone} className="w-full rounded-full py-3 font-semibold uppercase tracking-[0.1em] text-white disabled:opacity-40" style={{ background: 'var(--st-grad)' }}>{submitting ? 'A enviar…' : 'Entrar na lista'}</button>
             </form>
           )}
         </div>

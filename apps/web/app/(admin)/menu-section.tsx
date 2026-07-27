@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { formatMT as coreFormatMT, type Cents } from '@delivery/core';
+import { RelatedEditor } from './related-editor';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -596,13 +597,16 @@ function ItemModal({
           )}
         </div>
 
-        {/* Tamanhos + Adicionais (opcional). Só para item já guardado, pois
-            referenciam menu_item_id. Sem nenhum → item fica "simples". */}
+        {/* Tamanhos + Adicionais + Relacionados (opcional). Só para item já
+            guardado, pois referenciam menu_item_id. Sem nenhum → item "simples". */}
         {item ? (
-          <OptionsEditor itemId={item.id} />
+          <>
+            <OptionsEditor itemId={item.id} />
+            <RelatedEditor itemId={item.id} />
+          </>
         ) : (
           <p className="text-xs text-[#A8A8B0] border-t border-white/[0.08] pt-3">
-            Guarda o item primeiro para adicionar <strong>Tamanhos</strong> e <strong>Adicionais</strong> (opcional).
+            Guarda o item primeiro para adicionar <strong>Tamanhos</strong>, <strong>Adicionais</strong> e <strong>Relacionados</strong> (opcional).
           </p>
         )}
 
