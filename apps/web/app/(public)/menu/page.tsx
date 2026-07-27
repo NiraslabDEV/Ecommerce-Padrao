@@ -752,8 +752,8 @@ function ProductCard({ item, fav, onToggleFav, onOpen, onQuickAdd }: { item: Men
         </div>
       </button>
       <div className="mt-2.5 flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <button onClick={onOpen} className="block truncate text-left text-[13.5px] font-medium">{item.name}</button>
+        <div className="min-w-0 flex-1">
+          <button onClick={onOpen} className="block w-full truncate text-left text-[13.5px] font-medium">{item.name}</button>
           <p className="mt-0.5 text-[13px]" style={{ color: 'var(--st-muted-2)' }}>
             {hasOptions(item) && <span className="text-[11px]" style={{ color: 'var(--st-muted)' }}>desde </span>}
             {mt(item.price_cents)}
