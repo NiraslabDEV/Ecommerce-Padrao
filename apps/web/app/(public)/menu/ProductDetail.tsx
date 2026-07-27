@@ -85,7 +85,7 @@ export default function ProductDetail({
         {/* ── Galeria (coluna esquerda no desktop) ─────────────────── */}
         <div className="shrink-0 md:flex md:h-full md:w-1/2 md:shrink-0 md:flex-col">
           <div className="relative aspect-[4/5] max-h-[65vh] md:aspect-auto md:max-h-none md:flex-1" style={{ background: 'var(--st-card)' }}>
-            <SmartImage src={gallery[galleryIdx]} alt={item.name} monogram={item.name} />
+            <SmartImage src={gallery[galleryIdx]} alt={item.name} monogram={item.name} className="object-top" />
 
             <button
               onClick={onClose}
