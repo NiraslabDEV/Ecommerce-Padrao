@@ -79,12 +79,12 @@ export default function ProductDetail({
   return (
     <div className="fixed inset-0 z-40 md:flex md:items-center md:justify-center md:p-6" style={{ background: 'rgba(20,20,20,0.28)' }}>
       <div
-        className="mx-auto flex h-full w-full max-w-[480px] flex-col md:h-auto md:max-h-[92vh] md:max-w-4xl md:flex-row md:overflow-hidden md:rounded-3xl md:shadow-2xl"
+        className="mx-auto flex h-full w-full max-w-[480px] flex-col md:h-[min(90vh,760px)] md:max-w-4xl md:flex-row md:overflow-hidden md:rounded-3xl md:shadow-2xl"
         style={{ background: 'var(--st-bg)', color: 'var(--st-text)', fontFamily: 'var(--font-store)' }}
       >
         {/* ── Galeria (coluna esquerda no desktop) ─────────────────── */}
         <div className="shrink-0 md:flex md:h-full md:w-1/2 md:shrink-0 md:flex-col">
-          <div className="relative aspect-[4/5] md:flex-1 md:aspect-auto" style={{ background: 'var(--st-card)' }}>
+          <div className="relative aspect-[4/5] max-h-[65vh] md:aspect-auto md:max-h-none md:flex-1" style={{ background: 'var(--st-card)' }}>
             <SmartImage src={gallery[galleryIdx]} alt={item.name} monogram={item.name} />
 
             <button
