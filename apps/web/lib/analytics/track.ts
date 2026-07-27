@@ -309,6 +309,12 @@ export function trackCouponApplied(code: string) {
   emit('select_promotion', { promotion_name: code }, null, {});
 }
 
+// Clique num banner da Home (F10+). Evento first-party só — não precisa de
+// GA4/Meta (é uma métrica interna do admin, ver get_banner_clicks()).
+export function trackBannerClick(bannerId: string) {
+  postFP('banner_click', { payload: { banner_id: bannerId } });
+}
+
 /**
  * trackPurchase — REGRA CRÍTICA (16.1): só deve ser chamado em /order-status
  * quando o pedido está paid/approved, com guard de idempotência no caller.

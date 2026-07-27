@@ -7,9 +7,9 @@ import { formatMT, type Cents } from '@delivery/core';
 import { useCart } from '@/utils/useCart';
 import { useBodyScrollLock } from '@/utils/useBodyScrollLock';
 import { createClient } from '@/utils/supabase/client';
-import { trackViewMenu, trackViewItem, trackAddToCart, trackLead, trackCouponApplied, type TrackItem } from '@/lib/analytics/track';
+import { trackViewMenu, trackViewItem, trackAddToCart, trackLead, trackCouponApplied, trackBannerClick, type TrackItem } from '@/lib/analytics/track';
 import { brand } from '@brand';
-import type { MenuItem, Category } from './menu-types';
+import type { MenuItem, Category, Banner } from './menu-types';
 import { SmartImage } from './menu-ui';
 import ProductDetail, { type AddToCartPayload } from './ProductDetail';
 
@@ -106,6 +106,7 @@ export default function MenuPage() {
   });
 
   const categories: Category[] = useMemo(() => menuData?.categories || [], [menuData]);
+  const banners: Banner[] = useMemo(() => menuData?.banners || [], [menuData]);
   const acceptingOrders = menuData?.accepting_orders ?? true;
   const promoBannerUrl: string | null = menuData?.promo_banner_url ?? null;
   const promoCode: string | null = menuData?.promo_code ?? null;
@@ -170,6 +171,18 @@ export default function MenuPage() {
     trackViewItem({ id: item.id, name: item.name, price_cents: item.price_cents });
   }
   const openProductById = (id: string) => { const it = allItems.find((i) => i.id === id); if (it) openProduct(it); };
+
+  // Clique num banner (F10+): leva à categoria (filtra a PLP) ou a um link externo/custom.
+  function openBanner(b: Banner) {
+    trackBannerClick(b.id);
+    if (b.category_id) {
+      setActiveCategory(b.category_id);
+      document.getElementById('plp-toolbar')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else if (b.custom_url) {
+      if (/^https?:\/\//.test(b.custom_url)) window.open(b.custom_url, '_blank', 'noopener,noreferrer');
+      else router.push(b.custom_url);
+    }
+  }
 
   function onAddFromPDP(p: AddToCartPayload) {
     if (!product) return;
@@ -381,6 +394,32 @@ export default function MenuPage() {
             <p className="mt-4 text-center text-[13px] leading-relaxed" style={{ color: 'var(--st-muted-2)' }}>{ST.hero.subtitle}</p>
           )}
         </section>
+
+        {/* Banners de categoria (F10+): imagem ou vídeo 16:9, clicável, com métrica de clique */}
+        {banners.length > 0 && (
+          <section className="mt-7 space-y-4 px-5 md:px-8 lg:px-12">
+            {banners.map((b) => (
+              <button
+                key={b.id}
+                onClick={() => openBanner(b)}
+                className="block w-full overflow-hidden rounded-3xl"
+                style={{ aspectRatio: '16 / 9', background: 'var(--st-card)' }}
+                aria-label="Ver coleção"
+              >
+                {b.media_type === 'video' ? (
+                  <video
+                    src={b.image_url}
+                    className="h-full w-full object-cover"
+                    autoPlay muted loop playsInline
+                  />
+                ) : (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={b.image_url} alt="" className="h-full w-full object-cover" loading="lazy" />
+                )}
+              </button>
+            ))}
+          </section>
+        )}
 
         {/* Cupom promocional (opcional, admin) */}
         {(promoBannerUrl || promoCode) && !promoDismissed && (

@@ -29,3 +29,11 @@ export type RelatedProduct = {
   price_cents: number;
   photo_url: string | null;
 };
+
+export type Banner = {
+  id: string;
+  image_url: string;
+  media_type: 'image' | 'video';
+  category_id: string | null;
+  custom_url: string | null;
+};
