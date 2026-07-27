@@ -395,29 +395,10 @@ export default function MenuPage() {
           )}
         </section>
 
-        {/* Banners de categoria (F10+): imagem ou vídeo 16:9, clicável, com métrica de clique */}
+        {/* Banners de categoria (F10+): carrossel rotativo, transições variadas, métrica de clique */}
         {banners.length > 0 && (
-          <section className="mt-7 space-y-4 px-5 md:px-8 lg:px-12">
-            {banners.map((b) => (
-              <button
-                key={b.id}
-                onClick={() => openBanner(b)}
-                className="block w-full overflow-hidden rounded-3xl"
-                style={{ aspectRatio: '16 / 9', background: 'var(--st-card)' }}
-                aria-label="Ver coleção"
-              >
-                {b.media_type === 'video' ? (
-                  <video
-                    src={b.image_url}
-                    className="h-full w-full object-cover"
-                    autoPlay muted loop playsInline
-                  />
-                ) : (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={b.image_url} alt="" className="h-full w-full object-cover" loading="lazy" />
-                )}
-              </button>
-            ))}
+          <section className="mt-7 px-5 md:px-8 lg:px-12">
+            <BannerCarousel banners={banners} onOpen={openBanner} />
           </section>
         )}
 
@@ -770,6 +751,102 @@ function Chip({ label, active, onClick }: { label: string; active: boolean; onCl
     >
       {label}
     </button>
+  );
+}
+
+// ── Carrossel de banners: rotativo, mesmo lugar, transições bem diferentes entre si ──
+// Só propriedades "baratas" (opacity/transform/clip-path) — nunca width/top/left.
+type BannerEffect = 'fade' | 'slide' | 'zoom' | 'wipe';
+const BANNER_EFFECTS: BannerEffect[] = ['fade', 'slide', 'zoom', 'wipe'];
+const BANNER_DURATION = 800;
+const BANNER_INTERVAL = 6000;
+
+function bannerLayerStyle(effect: BannerEffect, active: boolean): React.CSSProperties {
+  const base: React.CSSProperties = {
+    position: 'absolute', inset: 0,
+    pointerEvents: active ? 'auto' : 'none',
+    zIndex: active ? 2 : 1,
+  };
+  switch (effect) {
+    case 'slide':
+      return {
+        ...base,
+        transition: `opacity ${BANNER_DURATION}ms ease, transform ${BANNER_DURATION}ms cubic-bezier(.22,.61,.36,1)`,
+        opacity: active ? 1 : 0,
+        transform: active ? 'translateX(0)' : 'translateX(4%)',
+      };
+    case 'zoom':
+      return {
+        ...base,
+        transition: `opacity ${BANNER_DURATION}ms ease, transform ${BANNER_DURATION}ms cubic-bezier(.22,.61,.36,1)`,
+        opacity: active ? 1 : 0,
+        transform: active ? 'scale(1)' : 'scale(1.12)',
+      };
+    case 'wipe':
+      return {
+        ...base,
+        transition: `clip-path ${BANNER_DURATION}ms cubic-bezier(.77,0,.175,1), opacity ${Math.round(BANNER_DURATION / 3)}ms ease`,
+        opacity: active ? 1 : 0,
+        clipPath: active ? 'inset(0 0 0 0%)' : 'inset(0 0 0 100%)',
+      };
+    default: // fade
+      return { ...base, transition: `opacity ${BANNER_DURATION}ms ease`, opacity: active ? 1 : 0 };
+  }
+}
+
+function BannerCarousel({ banners, onOpen }: { banners: Banner[]; onOpen: (b: Banner) => void }) {
+  const [index, setIndex] = useState(0);
+  const [effectIdx, setEffectIdx] = useState(0);
+  const multi = banners.length > 1;
+
+  // Reagenda a troca sempre que o índice muda (auto OU manual) — nunca "briga" com o clique nos pontinhos.
+  useEffect(() => {
+    if (!multi) return;
+    const t = setTimeout(() => {
+      setIndex((i) => (i + 1) % banners.length);
+      setEffectIdx((e) => (e + 1) % BANNER_EFFECTS.length);
+    }, BANNER_INTERVAL);
+    return () => clearTimeout(t);
+  }, [index, multi, banners.length]);
+
+  const goTo = (i: number) => {
+    if (i === index) return;
+    setIndex(i);
+    setEffectIdx((e) => (e + 1) % BANNER_EFFECTS.length);
+  };
+
+  const effect = BANNER_EFFECTS[effectIdx];
+
+  return (
+    <div className="relative w-full overflow-hidden rounded-3xl" style={{ aspectRatio: '16 / 9', background: 'var(--st-card)' }}>
+      {banners.map((b, i) => (
+        <div key={b.id} style={bannerLayerStyle(effect, i === index)}>
+          <button onClick={() => onOpen(b)} className="block h-full w-full" aria-label="Ver coleção" tabIndex={i === index ? 0 : -1}>
+            {b.media_type === 'video' ? (
+              <video src={b.image_url} className="h-full w-full object-cover" autoPlay muted loop playsInline />
+            ) : (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={b.image_url} alt="" className="h-full w-full object-cover" loading={i === 0 ? 'eager' : 'lazy'} />
+            )}
+          </button>
+        </div>
+      ))}
+
+      {multi && (
+        <div className="absolute inset-x-0 bottom-3 z-[3] flex justify-center gap-1.5">
+          {banners.map((b, i) => (
+            <button
+              key={b.id}
+              onClick={() => goTo(i)}
+              aria-label={`Ir para o banner ${i + 1}`}
+              aria-current={i === index}
+              className="h-1.5 rounded-full transition-all"
+              style={{ width: i === index ? 20 : 6, background: i === index ? '#fff' : 'rgba(255,255,255,0.5)' }}
+            />
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
