@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { formatMT, type Cents } from '@delivery/core';
 import { createClient } from '@/utils/supabase/client';
 import { trackBeginCheckout, trackAddPaymentInfo, type TrackItem } from '@/lib/analytics/track';
@@ -688,6 +689,11 @@ export default function CheckoutPage() {
               ? (paymentFlow === 'auto' ? 'A redirecionar…' : 'A criar pedido…')
               : (paymentFlow === 'auto' ? 'Ir para Pagamento' : 'Criar Pedido')}
           </button>
+          <p className="text-center text-xs" style={{ color: 'var(--st-muted)' }}>
+            Ao finalizar, concorda com os{' '}
+            <Link href="/termos" className="underline">Termos</Link> e a{' '}
+            <Link href="/privacidade" className="underline">Política de Privacidade</Link>.
+          </p>
         </div>
       </div>
     </div>

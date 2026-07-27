@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { DM_Sans, Bebas_Neue } from 'next/font/google';
 import './globals.css';
 import { Providers } from './providers';
+import { brand } from '@brand';
 
 const dmSans = DM_Sans({ subsets: ['latin'], variable: '--font-body' });
 const bebasNeue = Bebas_Neue({
@@ -10,9 +11,10 @@ const bebasNeue = Bebas_Neue({
   variable: '--font-display',
 });
 
+// Default whitelabel; (public)/layout.tsx e (admin)/layout.tsx especializam por área.
 export const metadata: Metadata = {
-  title: 'Delivery OS',
-  description: 'Sistema de encomendas online para restaurantes em Moçambique',
+  title: `${brand.name} — ${brand.tagline}`,
+  description: brand.tagline,
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
