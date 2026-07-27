@@ -76,20 +76,36 @@ export default function ProductDetail({
   const gallery: (string | null)[] = item.photo_url ? [item.photo_url] : [null];
   const unit = lineUnitPrice(item, selVariant, selAddons);
 
+  // Renderizado 2x (desktop in-flow + footer fixo mobile) — ver JSX abaixo.
+  const addToCartButton = (
+    <button
+      onClick={() => onAddToCart({ qty, variantId: selVariant, addonIds: selAddons, unitPriceCents: unit })}
+      className="flex h-12 w-full items-center justify-between rounded-full px-6 text-[13px] font-semibold uppercase tracking-[0.12em] text-white"
+      style={{ background: 'var(--st-grad)' }}
+    >
+      <span>Adicionar ao carrinho</span>
+      <span>{mt(unit * qty)}</span>
+    </button>
+  );
+
   return (
     <div className="fixed inset-0 z-40 md:flex md:items-center md:justify-center md:p-6" style={{ background: 'rgba(20,20,20,0.28)' }}>
       <div
-        className="mx-auto flex h-full w-full max-w-[480px] flex-col md:h-[min(90vh,760px)] md:max-w-4xl md:flex-row md:overflow-hidden md:rounded-3xl md:shadow-2xl"
+        className="mx-auto flex h-full w-full max-w-[480px] flex-col overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch] md:h-[min(90vh,760px)] md:max-w-4xl md:flex-row md:overflow-hidden md:rounded-3xl md:shadow-2xl"
         style={{ background: 'var(--st-bg)', color: 'var(--st-text)', fontFamily: 'var(--font-store)' }}
       >
         {/* ── Galeria (coluna esquerda no desktop) ─────────────────── */}
+        {/* Mobile: flui normalmente e scrolla junto com o conteudo (ver botao fixo
+            no fim do ficheiro) — antes a foto era um bloco de altura fixa que NAO
+            fazia parte da area com scroll, por isso arrastar sobre ela nao tinha
+            efeito nenhum. */}
         <div className="shrink-0 md:flex md:h-full md:w-1/2 md:shrink-0 md:flex-col">
-          <div className="relative aspect-[4/5] max-h-[65vh] md:aspect-auto md:max-h-none md:flex-1" style={{ background: 'var(--st-card)' }}>
+          <div className="relative aspect-[2/3] max-h-[70vh] md:aspect-auto md:max-h-none md:flex-1" style={{ background: 'var(--st-card)' }}>
             <SmartImage src={gallery[galleryIdx]} alt={item.name} monogram={item.name} className="object-top" />
 
             <button
               onClick={onClose}
-              className="absolute left-4 top-4 grid h-10 w-10 place-items-center rounded-full text-lg"
+              className="fixed left-4 top-4 z-10 grid h-10 w-10 place-items-center rounded-full text-lg md:absolute"
               style={{ background: 'rgba(255,255,255,0.9)', color: 'var(--st-text)', boxShadow: '0 2px 10px rgba(0,0,0,0.12)' }}
               aria-label="Voltar"
             >
@@ -97,7 +113,7 @@ export default function ProductDetail({
             </button>
             <button
               onClick={onToggleFav}
-              className="absolute right-4 top-4 grid h-10 w-10 place-items-center rounded-full text-lg"
+              className="fixed right-4 top-4 z-10 grid h-10 w-10 place-items-center rounded-full text-lg md:absolute"
               style={{ background: 'rgba(255,255,255,0.9)', color: isFav ? 'var(--st-primary-2)' : 'var(--st-text)', boxShadow: '0 2px 10px rgba(0,0,0,0.12)' }}
               aria-label="Adicionar aos favoritos"
             >
@@ -123,9 +139,10 @@ export default function ProductDetail({
         </div>
 
         {/* ── Coluna direita (desktop): conteúdo + CTA juntos ──────── */}
-        <div className="flex min-h-0 flex-1 flex-col md:w-1/2">
+        <div className="flex flex-col md:min-h-0 md:flex-1 md:w-1/2">
         {/* ── Conteúdo ────────────────────────────────────────────── */}
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-6 pt-5">
+        {/* pb-28 no mobile abre espaço pro footer fixo (abaixo) nao tapar o fim do conteudo */}
+        <div className="px-5 pb-28 pt-5 md:min-h-0 md:flex-1 md:overflow-y-auto md:overscroll-contain md:pb-6">
           {categoryLabel && (
             <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--st-primary-2)' }}>
               {categoryLabel}
@@ -298,18 +315,21 @@ export default function ProductDetail({
           <RelatedProducts itemId={item.id} onOpenItem={onOpenItem} />
         </div>
 
-        {/* ── Barra fixa: adicionar ao carrinho ───────────────────── */}
-        <div className="shrink-0 border-t px-5 py-3.5" style={{ borderColor: 'var(--st-line)', background: 'var(--st-bg)' }}>
-          <button
-            onClick={() => onAddToCart({ qty, variantId: selVariant, addonIds: selAddons, unitPriceCents: unit })}
-            className="flex h-12 w-full items-center justify-between rounded-full px-6 text-[13px] font-semibold uppercase tracking-[0.12em] text-white"
-            style={{ background: 'var(--st-grad)' }}
-          >
-            <span>Adicionar ao carrinho</span>
-            <span>{mt(unit * qty)}</span>
-          </button>
+        {/* ── Barra: adicionar ao carrinho (desktop, dentro da coluna que já scrolla) ── */}
+        <div className="hidden border-t px-5 py-3.5 md:block md:shrink-0" style={{ borderColor: 'var(--st-line)', background: 'var(--st-bg)' }}>
+          {addToCartButton}
         </div>
         </div>
+      </div>
+
+      {/* Mobile: footer fixo no viewport — foto+conteúdo agora scrollam juntos (fora
+          de um pai com overflow), então o CTA precisa de ficar fora dessa área pra
+          continuar sempre visível/tocável sem depender de scroll. */}
+      <div
+        className="fixed inset-x-0 bottom-0 z-10 border-t px-5 md:hidden"
+        style={{ borderColor: 'var(--st-line)', background: 'var(--st-bg)', paddingTop: '0.875rem', paddingBottom: 'calc(0.875rem + env(safe-area-inset-bottom))' }}
+      >
+        {addToCartButton}
       </div>
     </div>
   );
