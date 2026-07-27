@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { formatMT, type Cents } from '@delivery/core';
 import { useBodyScrollLock } from '@/utils/useBodyScrollLock';
 import type { MenuItem, RelatedProduct } from './menu-types';
-import { SmartImage, colorForName, variantsLookLikeColors, isLightColor } from './menu-ui';
+import { SmartImage, ProductMedia, colorForName, variantsLookLikeColors, isLightColor, stockLabel, isLowStock } from './menu-ui';
 
 const mt = (cents: number) => formatMT(cents as Cents);
 
@@ -107,7 +107,11 @@ export default function ProductDetail({
               fica sempre 100% da largura (o modal já rola inteiro, então uma foto
               mais alta deixa de ser um problema). */}
           <div className="relative aspect-[2/3] md:aspect-auto md:max-h-none md:flex-1" style={{ background: 'var(--st-card)' }}>
-            <SmartImage src={gallery[galleryIdx]} alt={item.name} monogram={item.name} fit="contain" />
+            {galleryIdx === 0 ? (
+              <ProductMedia item={item} fit="contain" />
+            ) : (
+              <SmartImage src={gallery[galleryIdx]} alt={item.name} monogram={item.name} fit="contain" />
+            )}
 
             <button
               onClick={onClose}
@@ -159,6 +163,11 @@ export default function ProductDetail({
           <div className="mt-2.5 flex items-baseline gap-2">
             <span className="text-2xl font-semibold">{mt(unit)}</span>
           </div>
+          {stockLabel(item) && (
+            <p className="mt-1 text-[12px] font-medium" style={{ color: isLowStock(item) ? 'var(--st-primary-2)' : 'var(--st-muted)' }}>
+              {stockLabel(item)}
+            </p>
+          )}
 
           {item.description && (
             <p className="mt-4 text-[13.5px] leading-relaxed" style={{ color: 'var(--st-muted-2)' }}>

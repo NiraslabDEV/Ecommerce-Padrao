@@ -76,6 +76,66 @@ export function SmartImage({
   );
 }
 
+// ── Media de produto animada: vídeo > 2 fotos (crossfade) > 1 foto (Ken Burns) ──
+// "Quase grátis": puro CSS (keyframes em globals.css), zero libs, zero JS de
+// animação. Ordem de prioridade decidida aqui uma vez só (card e PDP reusam).
+export function ProductMedia({
+  item,
+  rounded,
+  fit = 'cover',
+}: {
+  item: { photo_url: string | null; photo_url_2?: string | null; video_url?: string | null; name: string };
+  rounded?: string;
+  fit?: 'cover' | 'contain';
+}) {
+  if (item.video_url) {
+    return (
+      <video
+        src={item.video_url}
+        poster={item.photo_url ?? undefined}
+        autoPlay
+        muted
+        loop
+        playsInline
+        className={`absolute inset-0 h-full w-full ${rounded ?? ''}`}
+        style={{ objectFit: fit }}
+      />
+    );
+  }
+
+  if (item.photo_url && item.photo_url_2) {
+    return (
+      <>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={item.photo_url}
+          alt={item.name}
+          loading="lazy"
+          className={`pm-crossfade-a absolute inset-0 h-full w-full ${rounded ?? ''}`}
+          style={{ objectFit: fit }}
+        />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={item.photo_url_2}
+          alt=""
+          aria-hidden
+          loading="lazy"
+          className={`pm-crossfade-b absolute inset-0 h-full w-full ${rounded ?? ''}`}
+          style={{ objectFit: fit }}
+        />
+      </>
+    );
+  }
+
+  return (
+    <div className={`absolute inset-0 h-full w-full overflow-hidden ${rounded ?? ''}`}>
+      <div className="pm-kenburns absolute inset-0 h-full w-full">
+        <SmartImage src={item.photo_url} alt={item.name} monogram={item.name} fit={fit} />
+      </div>
+    </div>
+  );
+}
+
 // ── Deteção de cores em nomes de variante (swatches vs pills) ────────────────
 const stripAccents = (s: string) =>
   s.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase().trim();
@@ -133,4 +193,16 @@ export function isLightColor(hex: string): boolean {
   const g = parseInt(h.slice(2, 4), 16);
   const b = parseInt(h.slice(4, 6), 16);
   return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.82;
+}
+
+// ── Indicador de estoque (só quando o item rastreia stock) ──────────────────
+const LOW_STOCK_THRESHOLD = 5;
+
+export function stockLabel(item: { track_stock?: boolean; stock_qty?: number | null }): string | null {
+  if (!item.track_stock || item.stock_qty == null) return null;
+  return item.stock_qty <= 1 ? 'Última peça' : `${item.stock_qty} em estoque`;
+}
+
+export function isLowStock(item: { track_stock?: boolean; stock_qty?: number | null }): boolean {
+  return Boolean(item.track_stock) && item.stock_qty != null && item.stock_qty <= LOW_STOCK_THRESHOLD;
 }

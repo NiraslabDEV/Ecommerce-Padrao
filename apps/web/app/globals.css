@@ -186,3 +186,36 @@ button {
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor; mask-composite: exclude;
 }
+
+/* ============================================================
+   Media de produto animada — fallback CSS "quase grátis" quando
+   não há vídeo (ver ProductMedia em menu-ui.tsx):
+   - 2+ fotos → crossfade contínuo entre elas.
+   - 1 foto  → Ken Burns (zoom + pan suave em loop).
+   Ambas correm sempre (não dependem de :hover) para funcionar
+   igual em touch/mobile, onde não há hover real.
+   ============================================================ */
+@keyframes pm-kenburns {
+  0%   { transform: scale(1)     translate(0, 0); }
+  50%  { transform: scale(1.09)  translate(-1.5%, -1%); }
+  100% { transform: scale(1)     translate(0, 0); }
+}
+.pm-kenburns {
+  animation: pm-kenburns 9s ease-in-out infinite;
+  will-change: transform;
+}
+
+@keyframes pm-crossfade-a {
+  0%, 45%  { opacity: 1; }
+  55%, 100% { opacity: 0; }
+}
+@keyframes pm-crossfade-b {
+  0%, 45%  { opacity: 0; }
+  55%, 100% { opacity: 1; }
+}
+.pm-crossfade-a { animation: pm-crossfade-a 6s ease-in-out infinite; }
+.pm-crossfade-b { animation: pm-crossfade-b 6s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pm-kenburns, .pm-crossfade-a, .pm-crossfade-b { animation: none !important; }
+}

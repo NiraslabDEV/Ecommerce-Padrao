@@ -10,7 +10,7 @@ import { createClient } from '@/utils/supabase/client';
 import { trackViewMenu, trackViewItem, trackAddToCart, trackLead, trackCouponApplied, trackBannerClick, type TrackItem } from '@/lib/analytics/track';
 import { brand } from '@brand';
 import type { MenuItem, Category, Banner } from './menu-types';
-import { SmartImage } from './menu-ui';
+import { SmartImage, ProductMedia, stockLabel, isLowStock } from './menu-ui';
 import ProductDetail, { type AddToCartPayload } from './ProductDetail';
 
 const mt = (cents: number) => formatMT(cents as Cents);
@@ -857,7 +857,7 @@ function ProductCard({ item, fav, onToggleFav, onOpen, onQuickAdd }: { item: Men
     <div className="group">
       <button onClick={onOpen} className="block w-full text-left" aria-label={item.name}>
         <div className="relative overflow-hidden rounded-2xl" style={{ aspectRatio: '3 / 4', background: 'var(--st-card)', border: '1px solid var(--st-line)' }}>
-          <SmartImage src={item.photo_url} alt={item.name} monogram={item.name} rounded="rounded-2xl" />
+          <ProductMedia item={item} rounded="rounded-2xl" />
           <span
             role="button" tabIndex={0}
             onClick={(e) => { e.stopPropagation(); onToggleFav(); }}
@@ -875,6 +875,11 @@ function ProductCard({ item, fav, onToggleFav, onOpen, onQuickAdd }: { item: Men
             {hasOptions(item) && <span className="text-[11px]" style={{ color: 'var(--st-muted)' }}>desde </span>}
             {mt(item.price_cents)}
           </p>
+          {stockLabel(item) && (
+            <p className="mt-0.5 text-[11px] font-medium" style={{ color: isLowStock(item) ? 'var(--st-primary-2)' : 'var(--st-muted)' }}>
+              {stockLabel(item)}
+            </p>
+          )}
         </div>
         <button
           onClick={onQuickAdd}

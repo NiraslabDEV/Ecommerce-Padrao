@@ -26,7 +26,7 @@ let anon:       SupabaseClient;
 let testUserId: string;
 let menuItemId: string;
 
-const ITEM_PRICE = 65000; // Caril de Camarao (seed)
+const ITEM_PRICE = 320000; // Vestido Midi de Linho (seed)
 
 beforeAll(async () => {
   admin = createClient(SUPABASE_URL, SERVICE_KEY);
@@ -45,11 +45,16 @@ beforeAll(async () => {
   });
   if (signInErr) throw new Error(`Autenticação falhou: ${signInErr.message}`);
 
+  // create_order() deriva o flow de settings.payment_provider (nunca do
+  // payload do client) — sem isto, createDigitalOrder() cria pedidos
+  // 'manual'/awaiting_approval e confirm_payment devolve 'invalid_state'.
+  await admin.from('settings').update({ payment_provider: 'mock' }).eq('id', 1);
+
   // Get a menu item that tracks stock
   const { data: item, error } = await admin
     .from('menu_items')
     .select('id, stock_qty, track_stock, available')
-    .eq('name', 'Caril de Camarao')
+    .eq('name', 'Vestido Midi de Linho')
     .single();
   if (error || !item) throw new Error(`Setup: item não encontrado — ${error?.message}`);
   menuItemId = item.id;
@@ -67,6 +72,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   if (testUserId) await admin.auth.admin.deleteUser(testUserId);
+  await admin.from('settings').update({ payment_provider: 'manual' }).eq('id', 1);
 });
 
 afterEach(async () => {
@@ -238,16 +244,26 @@ describe('(b) Trigger: stock_qty=0 → available=false', () => {
 
 describe('(c) Rollback total quando item esgota', () => {
   it('faz rollback total quando stock é insuficiente durante confirm_payment', async () => {
-    // Set stock to 2
+    // Stock suficiente na criação do pedido (create_order valida stock_qty >= qty
+    // desde a migration 0020) — o esgotamento acontece DEPOIS, simulando outra
+    // venda a esvaziar o stock enquanto este pedido aguarda pagamento.
+    await admin
+      .from('menu_items')
+      .update({ stock_qty: 5, track_stock: true, available: true })
+      .eq('id', menuItemId);
+
+    const orderId = await createDigitalOrder('Stock Test 4', 5);
+
     await admin
       .from('menu_items')
       .update({ stock_qty: 2, track_stock: true, available: true })
       .eq('id', menuItemId);
 
-    const orderId = await createDigitalOrder('Stock Test 4', 5); // Request 5, only 2 available
     const idempotencyKey = `order_${orderId}`;
 
-    // Try to confirm payment - should fail due to insufficient stock
+    // Try to confirm payment - should fail due to insufficient stock.
+    // confirm_payment não lança (mesmo padrão de amount_mismatch/invalid_state):
+    // devolve 'out_of_stock' para o event_log sobreviver ao rollback do savepoint.
     const { data: result, error } = await staff.rpc('confirm_payment', {
       p_idempotency_key: idempotencyKey,
       p_order_id:        orderId,
@@ -257,8 +273,8 @@ describe('(c) Rollback total quando item esgota', () => {
       p_amount_cents:    ITEM_PRICE * 5,
     });
 
-    expect(error).toBeTruthy();
-    expect(error?.message).toContain('out_of_stock');
+    expect(error).toBeNull();
+    expect(result).toBe('out_of_stock');
 
     // Stock should NOT have been deducted (rollback)
     const { data: item } = await admin
@@ -320,13 +336,15 @@ describe('(d) Concorrência: 2 pedidos disputam último item', () => {
       }),
     ]);
 
-    // One should succeed, one should fail
-    const successCount = results.filter(r => 
-      r.status === 'fulfilled' && r.value === 'ok'
+    // One should succeed, one should fail.
+    // staff.rpc() nunca rejeita (não lança) — devolve sempre {data,error};
+    // por isso comparar r.value.data, não r.value diretamente.
+    const successCount = results.filter(r =>
+      r.status === 'fulfilled' && r.value.data === 'ok'
     ).length;
-    const failureCount = results.filter(r => 
-      r.status === 'rejected' || 
-      (r.status === 'fulfilled' && r.value !== 'ok')
+    const failureCount = results.filter(r =>
+      r.status === 'rejected' ||
+      (r.status === 'fulfilled' && r.value.data !== 'ok')
     ).length;
 
     expect(successCount).toBe(1);

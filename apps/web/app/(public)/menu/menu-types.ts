@@ -11,7 +11,11 @@ export type MenuItem = {
   description: string | null;
   price_cents: number;
   photo_url: string | null;
+  photo_url_2?: string | null;
+  video_url?: string | null;
   available?: boolean;
+  track_stock?: boolean;
+  stock_qty?: number | null;
   variants?: Variant[];
   addons?: Addon[];
 };
