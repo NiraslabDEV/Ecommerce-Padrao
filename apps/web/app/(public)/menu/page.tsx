@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { formatMT, type Cents } from '@delivery/core';
 import { useCart } from '@/utils/useCart';
+import { useBodyScrollLock } from '@/utils/useBodyScrollLock';
 import { createClient } from '@/utils/supabase/client';
 import { trackViewMenu, trackViewItem, trackAddToCart, trackLead, trackCouponApplied, type TrackItem } from '@/lib/analytics/track';
 import { brand } from '@brand';
@@ -90,6 +91,10 @@ export default function MenuPage() {
   const [myOrders, setMyOrders] = useState<CustomerOrder[] | null>(null);
   const { cart, add, setQtyByIndex, count, clear } = useCart();
   const supabase = createClient();
+
+  // Trava o scroll da Home enquanto a sacola ou um overlay de conta estiver aberto
+  // (sem isto, arrastar no drawer/overlay rola a página por baixo).
+  useBodyScrollLock(cartOpen || account !== null);
 
   const { data: menuData, isLoading, error } = useQuery({
     queryKey: ['menu'],
@@ -616,7 +621,7 @@ export default function MenuPage() {
               <button onClick={() => setCartOpen(false)} className="text-xl" style={{ color: 'var(--st-muted)' }} aria-label="Fechar">✕</button>
             </div>
 
-            <div className="flex-1 space-y-3 overflow-y-auto p-4">
+            <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain p-4">
               {cart.length === 0 && <p className="py-10 text-center" style={{ color: 'var(--st-muted)' }}>Sacola vazia</p>}
               {cart.map((line, idx) => {
                 const isGift = giftItemIds.has(line.menuItemId);
@@ -785,7 +790,7 @@ function Overlay({ title, onClose, children }: { title: string; onClose: () => v
           <button onClick={onClose} className="text-2xl leading-none" aria-label="Voltar">←</button>
           <h1 className="text-xl font-semibold">{title}</h1>
         </header>
-        <div className="flex-1 overflow-y-auto p-4">{children}</div>
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4">{children}</div>
       </div>
     </div>
   );

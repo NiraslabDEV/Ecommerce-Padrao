@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { formatMT, type Cents } from '@delivery/core';
+import { useBodyScrollLock } from '@/utils/useBodyScrollLock';
 import type { MenuItem, RelatedProduct } from './menu-types';
 import { SmartImage, colorForName, variantsLookLikeColors, isLightColor } from './menu-ui';
 
@@ -50,6 +51,9 @@ export default function ProductDetail({
   const [selAddons, setSelAddons] = useState<string[]>([]);
   const [galleryIdx, setGalleryIdx] = useState(0);
   const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
+
+  // Sem isto, o gesto de scroll no modal "vaza" e rola a Home por baixo (mobile).
+  useBodyScrollLock(true);
 
   // reset ao trocar de produto (ex.: clicar num relacionado)
   useEffect(() => {
@@ -121,7 +125,7 @@ export default function ProductDetail({
         {/* ── Coluna direita (desktop): conteúdo + CTA juntos ──────── */}
         <div className="flex min-h-0 flex-1 flex-col md:w-1/2">
         {/* ── Conteúdo ────────────────────────────────────────────── */}
-        <div className="flex-1 overflow-y-auto px-5 pb-6 pt-5">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-6 pt-5">
           {categoryLabel && (
             <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--st-primary-2)' }}>
               {categoryLabel}
