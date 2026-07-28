@@ -115,8 +115,14 @@ settings            (id smallint pk default 1 check (id=1)  -- singleton
                      banner_images     jsonb default '[]') -- [{url,title,sort}] até 5 mini banners (Formato 2)
 menu_categories     (id uuid pk, name, sort int, station text check in ('kitchen','bar','cold_kitchen') default 'kitchen', active bool default true)
 menu_items          (id uuid pk, category_id, name, description, price_cents int check (>=0),
+                     compare_at_price_cents int null,   -- "de X por Y" riscado (§20)
                      photo_url, available bool default true,
                      track_stock bool default false, stock_qty int check (>=0), sort int)
+promotions          (id uuid pk, name, scope text check in ('store','category','item'),
+                     category_id uuid null, menu_item_id uuid null,
+                     discount_type text check in ('pct','cents'), discount_value int check (>0),
+                     active bool default true, starts_at timestamptz null, ends_at timestamptz null)
+                     -- campanhas de desconto; NÃO acumulam (vence o maior). Ver §20
 delivery_zones      (id uuid pk, name, fee_cents int check (>=0), active bool default true, sort int)
 orders              (id uuid pk, order_number text unique,         -- "ENC-0042"
                      status text, flow text check in ('digital','manual'),
@@ -288,6 +294,9 @@ PRINTER_IP=
 - ❌ Disparar `purchase` antes de `paid`/`approved`.
 - ❌ Devolver PII (morada, comprovativo, pagamento) de um telefone na personalização soft (sem OTP).
 - ❌ Permitir item `is_gift` no pedido sem cupom válido, ou mais de 1 unidade de brinde.
+- ❌ Reescrever `menu_items.price_cents` em massa para fazer promoção (§20 — campanha é REGRA, não UPDATE de preço).
+- ❌ Somar descontos de campanhas diferentes (não acumulam: vence o maior).
+- ❌ Calcular preço com desconto no client — só `public.effective_price*` decide (vitrine **e** cobrança).
 
 ---
 
@@ -516,3 +525,36 @@ Aditivos a tabelas existentes:
 **Nunca:** confiar no client para desconto, brinde ou validade de cupom; expor pixels com ID hardcoded; carregar marketing sem consentimento; devolver PII de outro telefone na personalização.
 </content>
 </invoke>
+
+---
+
+## 20. Cortes de preço & promoções — spec resumida (padrão fechado)
+
+> Spec completa: [`docs/precos-e-promocoes.md`](docs/precos-e-promocoes.md).
+> Migration: `supabase/migrations/20260728000003_promotions.sql` · espelho TS: `packages/core/src/pricing.ts`.
+
+**Regra de ouro:** `menu_items.price_cents` é SEMPRE o preço de tabela. Uma promoção é uma **regra**,
+nunca um `UPDATE` em massa de preços — desligar a campanha devolve tudo ao normal sem perder nada.
+
+Duas formas (e só duas) de baixar preço:
+1. **Produto** — `menu_items.compare_at_price_cents`: o "de X **por** Y" riscado daquele produto.
+   Ignorado se ≤ `price_cents` (nada de desconto falso).
+2. **Campanha** — tabela `promotions`: escopo `store` (loja inteira) · `category` (ex.: todos os perfumes)
+   · `item`; desconto em `pct` (%) ou `cents` (MT fixo); janela `starts_at`/`ends_at` opcional; `active`.
+
+**Cálculo (única fonte: `public.effective_price` / `effective_price_cents`):**
+```
+desconto = MAIOR desconto entre as campanhas ativas aplicáveis   -- NÃO acumulam
+preço    = price_cents − desconto            (piso 0)
+riscado  = MAIOR(compare_at_price_cents, price_cents)  ou null
+badge %  = round((1 − preço/riscado) × 100)
+```
+- `get_menu()` e `get_related_products()` devolvem `price_cents` **já com desconto** + `compare_at_cents` + `discount_pct`.
+- `create_order()` recalcula com a **mesma** função → a loja mostra e o servidor cobra o mesmo valor.
+- Variantes entram na campanha; **adicionais não** (somam depois); `is_gift` continua a 0.
+- Cupom de indicação (§17) incide sobre o subtotal **já cortado**.
+- `anon` não lê `promotions` (RLS staff_all) — os preços já saem calculados do RPC.
+
+**Import/export da lista de produtos** (`docs/menu-format.md`): mesmo formato canónico nos dois sentidos,
+JSON ou CSV (Excel). Painel: Catálogo → **Importar / Exportar**. CLI: `pnpm menu:export` / `pnpm menu:import`.
+O **nome** é a chave (upsert idempotente, nunca apaga). `compare_at_price` viaja no ficheiro; campanhas não.

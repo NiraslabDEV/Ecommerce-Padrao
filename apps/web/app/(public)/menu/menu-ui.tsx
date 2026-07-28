@@ -209,3 +209,55 @@ export function stockLabel(item: { track_stock?: boolean; stock_qty?: number | n
 export function isLowStock(item: { track_stock?: boolean; stock_qty?: number | null }): boolean {
   return Boolean(item.track_stock) && item.stock_qty != null && item.stock_qty <= LOW_STOCK_THRESHOLD;
 }
+
+// ── Corte de preço ("de X por Y") ────────────────────────────────────────────
+// O `price_cents` que chega do get_menu() JÁ vem com o desconto aplicado pelo
+// servidor (public.effective_price). Aqui só se DESENHA o riscado e o badge:
+// nenhum cálculo de preço vive no client. Ver docs/precos-e-promocoes.md.
+
+export function hasPriceCut(p: { compare_at_cents?: number | null; price_cents: number }): boolean {
+  return p.compare_at_cents != null && p.compare_at_cents > p.price_cents;
+}
+
+/** Selo "-30%" para o canto da foto. */
+export function DiscountBadge({ pct, className = '' }: { pct?: number; className?: string }) {
+  if (!pct || pct <= 0) return null;
+  return (
+    <span
+      className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white ${className}`}
+      style={{ background: 'var(--st-grad)' }}
+    >
+      -{pct}%
+    </span>
+  );
+}
+
+/** Preço + preço antigo riscado (quando existe corte). */
+export function PriceWithCut({
+  priceCents,
+  compareAtCents,
+  format,
+  className = '',
+  compareClassName = '',
+  prefix,
+}: {
+  priceCents: number;
+  compareAtCents?: number | null;
+  format: (cents: number) => string;
+  className?: string;
+  compareClassName?: string;
+  prefix?: React.ReactNode;
+}) {
+  const cut = compareAtCents != null && compareAtCents > priceCents;
+  return (
+    <span className={`inline-flex items-baseline gap-1.5 ${className}`}>
+      {prefix}
+      <span>{format(priceCents)}</span>
+      {cut && (
+        <span className={`text-[0.8em] line-through ${compareClassName}`} style={{ color: 'var(--st-muted)' }}>
+          {format(compareAtCents!)}
+        </span>
+      )}
+    </span>
+  );
+}

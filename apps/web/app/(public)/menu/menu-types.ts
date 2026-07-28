@@ -2,10 +2,18 @@
 // Nota: variants/addons são OPCIONAIS no payload — só existem quando o backend
 // (get_menu) os devolve. A UI renderiza swatches/filtros só "quando existir".
 
-export type Variant = { id: string; name: string; price_cents: number; is_default?: boolean };
+// Corte de preço (raiz CLAUDE §20 / docs/precos-e-promocoes.md): o `price_cents` que
+// chega do get_menu() JÁ é o preço a pagar (com desconto aplicado no servidor).
+// `compare_at_cents` é só o valor riscado e `discount_pct` o badge — ambos cosméticos.
+export type PriceCut = {
+  compare_at_cents?: number | null;
+  discount_pct?: number;
+};
+
+export type Variant = { id: string; name: string; price_cents: number; is_default?: boolean } & PriceCut;
 export type Addon = { id: string; name: string; price_cents: number };
 
-export type MenuItem = {
+export type MenuItem = PriceCut & {
   id: string;
   name: string;
   description: string | null;
@@ -27,7 +35,7 @@ export type Category = {
   items: MenuItem[];
 };
 
-export type RelatedProduct = {
+export type RelatedProduct = PriceCut & {
   id: string;
   name: string;
   price_cents: number;

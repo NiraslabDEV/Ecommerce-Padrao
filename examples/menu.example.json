@@ -18,6 +18,7 @@
           "name": "Rissóis de Camarão (6un)",
           "description": "Massa estaladiça recheada",
           "price": 90,
+          "compare_at_price": 120,
           "track_stock": true,
           "stock_qty": 40
         }

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { formatMT, type Cents } from '@delivery/core';
 import { useBodyScrollLock } from '@/utils/useBodyScrollLock';
 import type { MenuItem, RelatedProduct } from './menu-types';
-import { SmartImage, ProductMedia, colorForName, variantsLookLikeColors, isLightColor, stockLabel, isLowStock } from './menu-ui';
+import { SmartImage, ProductMedia, colorForName, variantsLookLikeColors, isLightColor, stockLabel, isLowStock, DiscountBadge, PriceWithCut } from './menu-ui';
 
 const mt = (cents: number) => formatMT(cents as Cents);
 
@@ -75,6 +75,18 @@ export default function ProductDetail({
   // Galeria: usa photo_url (1 imagem hoje). 0 → painel de gradiente elegante.
   const gallery: (string | null)[] = item.photo_url ? [item.photo_url] : [null];
   const unit = lineUnitPrice(item, selVariant, selAddons);
+
+  // Corte de preço da seleção atual (só para riscar). O preço a pagar já vem
+  // descontado do servidor; os adicionais somam igual dos dois lados.
+  const unitCompareAt = useMemo(() => {
+    const chosen = selVariant ? variants.find((v) => v.id === selVariant) : undefined;
+    const base = chosen ? chosen.compare_at_cents : item.compare_at_cents;
+    if (base == null) return null;
+    const extras = (item.addons ?? [])
+      .filter((a) => selAddons.includes(a.id))
+      .reduce((s, a) => s + a.price_cents, 0);
+    return base + extras;
+  }, [selVariant, variants, item.compare_at_cents, item.addons, selAddons]);
 
   // Renderizado 2x (desktop in-flow + footer fixo mobile) — ver JSX abaixo.
   const addToCartButton = (
@@ -161,7 +173,13 @@ export default function ProductDetail({
           <h1 className="text-[26px] font-semibold leading-tight tracking-tight">{item.name}</h1>
 
           <div className="mt-2.5 flex items-baseline gap-2">
-            <span className="text-2xl font-semibold">{mt(unit)}</span>
+            <PriceWithCut
+              priceCents={unit}
+              compareAtCents={unitCompareAt}
+              format={mt}
+              className="text-2xl font-semibold"
+            />
+            {item.discount_pct ? <DiscountBadge pct={item.discount_pct} /> : null}
           </div>
           {stockLabel(item) && (
             <p className="mt-1 text-[12px] font-medium" style={{ color: isLowStock(item) ? 'var(--st-primary-2)' : 'var(--st-muted)' }}>
@@ -382,7 +400,9 @@ function RelatedProducts({ itemId, onOpenItem }: { itemId: string; onOpenItem: (
               <SmartImage src={p.photo_url} alt={p.name} monogram={p.name} rounded="rounded-xl" />
             </div>
             <p className="mt-2 truncate text-[12.5px] font-medium">{p.name}</p>
-            <p className="text-[12.5px]" style={{ color: 'var(--st-muted-2)' }}>{mt(p.price_cents)}</p>
+            <p className="text-[12.5px]" style={{ color: 'var(--st-muted-2)' }}>
+              <PriceWithCut priceCents={p.price_cents} compareAtCents={p.compare_at_cents} format={mt} />
+            </p>
           </button>
         ))}
       </div>

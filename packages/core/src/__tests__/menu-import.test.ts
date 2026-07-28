@@ -68,6 +68,29 @@ describe('normalizeMenuImport', () => {
     ).toThrow();
   });
 
+  it('aceita compare_at_price (o "de X por Y" riscado)', () => {
+    const menu = normalizeMenuImport({
+      categories: [{ name: 'Perfumes', items: [{ name: 'Nuit', price: 900, compare_at_price: '1200' }] }],
+    });
+    expect(menu.categories[0].items[0].price_cents).toBe(90000);
+    expect(menu.categories[0].items[0].compare_at_price_cents).toBe(120000);
+  });
+
+  it('ignora compare_at_price menor ou igual ao preço (não inventa desconto)', () => {
+    const menu = normalizeMenuImport({
+      categories: [{ name: 'X', items: [{ name: 'Y', price: 900, compare_at_price: 900 }] }],
+    });
+    expect(menu.categories[0].items[0].compare_at_price_cents).toBe(null);
+  });
+
+  it('lança erro claro com compare_at_price inválido (inclui nome do item)', () => {
+    expect(() =>
+      normalizeMenuImport({
+        categories: [{ name: 'X', items: [{ name: 'Nuit', price: 900, compare_at_price: 'antes' }] }],
+      })
+    ).toThrow(/Nuit/);
+  });
+
   it('aceita station válida e rejeita inválida', () => {
     const ok = normalizeMenuImport({
       categories: [{ name: 'Bar', station: 'bar', items: [{ name: 'Cerveja', price: 80 }] }],

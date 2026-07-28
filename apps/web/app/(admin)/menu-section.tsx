@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { formatMT as coreFormatMT, type Cents } from '@delivery/core';
 import { RelatedEditor } from './related-editor';
+import { PromotionsSection } from './promotions-section';
+import { MenuIoSection } from './menu-io-section';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -22,6 +24,8 @@ interface Item {
   name: string;
   description: string | null;
   price_cents: number;
+  /** "de X" riscado na loja (corte manual deste produto). Ver docs/precos-e-promocoes.md. */
+  compare_at_price_cents: number | null;
   photo_url: string | null;
   photo_url_2: string | null;
   video_url: string | null;
@@ -91,7 +95,7 @@ export function MenuSection() {
   const supabase = createClient();
   
   // Tab state
-  const [activeTab, setActiveTab] = useState<'menu' | 'zones'>('menu');
+  const [activeTab, setActiveTab] = useState<'menu' | 'zones' | 'promos' | 'io'>('menu');
   
   // Menu state
   const [categories, setCategories] = useState<Category[]>([]);
@@ -111,7 +115,7 @@ export function MenuSection() {
     const [{ data: cats }, { data: its }] = await Promise.all([
       supabase.from('menu_categories').select('id, name, station, sort, active, photo_url').order('sort'),
       supabase.from('menu_items')
-        .select('id, category_id, name, description, price_cents, photo_url, photo_url_2, video_url, available, track_stock, stock_qty, sort')
+        .select('id, category_id, name, description, price_cents, compare_at_price_cents, photo_url, photo_url_2, video_url, available, track_stock, stock_qty, sort')
         .order('sort'),
     ]);
     setCategories((cats ?? []) as Category[]);
@@ -229,28 +233,29 @@ export function MenuSection() {
       )}
 
       {/* Tabs */}
-      <div className="flex gap-2">
-        <button
-          onClick={() => setActiveTab('menu')}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-            activeTab === 'menu'
-              ? 'bg-[#EA1D2C] text-white'
-              : 'bg-black/20 text-[#A8A8B0] hover:text-[#e8e8ea]'
-          }`}
-        >
-          Catálogo
-        </button>
-        <button
-          onClick={() => setActiveTab('zones')}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-            activeTab === 'zones'
-              ? 'bg-[#EA1D2C] text-white'
-              : 'bg-black/20 text-[#A8A8B0] hover:text-[#e8e8ea]'
-          }`}
-        >
-          Zonas de Entrega
-        </button>
+      <div className="flex gap-2 flex-wrap">
+        {([
+          ['menu', 'Catálogo'],
+          ['promos', 'Promoções'],
+          ['io', 'Importar / Exportar'],
+          ['zones', 'Zonas de Entrega'],
+        ] as const).map(([key, label]) => (
+          <button
+            key={key}
+            onClick={() => setActiveTab(key)}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              activeTab === key
+                ? 'bg-[#EA1D2C] text-white'
+                : 'bg-black/20 text-[#A8A8B0] hover:text-[#e8e8ea]'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
       </div>
+
+      {activeTab === 'promos' && <PromotionsSection />}
+      {activeTab === 'io' && <MenuIoSection />}
 
       {/* Menu Tab */}
       {activeTab === 'menu' && (
@@ -324,7 +329,19 @@ export function MenuSection() {
                       <p className={`font-semibold text-sm ${item.available ? 'text-white' : 'text-gray-500 line-through'}`}>
                         {item.name}{item.video_url && <span className="ml-1.5 text-[10px] font-bold text-[#EA1D2C] align-middle">▶ VÍDEO</span>}
                       </p>
-                      <p className="text-[#EA1D2C] font-bold text-sm">{formatMT(item.price_cents)}</p>
+                      <p className="text-[#EA1D2C] font-bold text-sm flex items-center gap-1.5">
+                        {formatMT(item.price_cents)}
+                        {item.compare_at_price_cents !== null && item.compare_at_price_cents > item.price_cents && (
+                          <>
+                            <span className="text-[#A8A8B0] font-normal text-xs line-through">
+                              {formatMT(item.compare_at_price_cents)}
+                            </span>
+                            <span className="text-[10px] font-bold bg-[#EA1D2C]/15 text-[#EA1D2C] rounded px-1 py-0.5">
+                              -{Math.round((1 - item.price_cents / item.compare_at_price_cents) * 100)}%
+                            </span>
+                          </>
+                        )}
+                      </p>
                       {item.track_stock && (
                         <p className="text-xs text-[#A8A8B0]">
                           Estoque: {item.stock_qty} {item.stock_qty <= 5 && '⚠️'}
@@ -493,6 +510,10 @@ function ItemModal({
   const [priceMT, setPriceMT] = useState(
     item ? centsToDecimalString(item.price_cents) : ''
   );
+  // Corte manual "de X por Y": preço riscado na loja. Vazio = sem corte.
+  const [compareAtMT, setCompareAtMT] = useState(
+    item?.compare_at_price_cents ? centsToDecimalString(item.compare_at_price_cents) : ''
+  );
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photo2File, setPhoto2File] = useState<File | null>(null);
   const [removePhoto2, setRemovePhoto2] = useState(false);
@@ -514,6 +535,22 @@ function ItemModal({
     } catch {
       setError('Preço inválido. Usa o formato 250.00');
       return;
+    }
+
+    // "Preço antes" (riscado). Vazio = sem corte. Tem de ser MAIOR que o preço,
+    // senão a loja mostraria um desconto falso.
+    let compareAtCents: number | null = null;
+    if (compareAtMT.trim() !== '') {
+      try {
+        compareAtCents = decimalStringToCents(compareAtMT.replace(',', '.'));
+      } catch {
+        setError('Preço antes inválido. Usa o formato 350.00 (ou deixa vazio).');
+        return;
+      }
+      if (compareAtCents <= priceCents) {
+        setError('O "preço antes" tem de ser maior que o preço atual.');
+        return;
+      }
     }
 
     setSaving(true);
@@ -570,6 +607,7 @@ function ItemModal({
       name: name.trim(),
       description: description.trim() || null,
       price_cents: priceCents,
+      compare_at_price_cents: compareAtCents,
       photo_url: photoUrl,
       photo_url_2: photoUrl2,
       video_url: videoUrl,
@@ -622,17 +660,43 @@ function ItemModal({
           />
         </div>
 
-        <div>
-          <label className="block text-xs font-semibold text-[#A8A8B0] mb-1">Preço (MT)</label>
-          <input
-            value={priceMT}
-            onChange={(e) => setPriceMT(e.target.value)}
-            required
-            inputMode="decimal"
-            className="w-full bg-black/20 border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#EA1D2C]"
-            placeholder="ex: 250.00"
-          />
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs font-semibold text-[#A8A8B0] mb-1">Preço (MT)</label>
+            <input
+              value={priceMT}
+              onChange={(e) => setPriceMT(e.target.value)}
+              required
+              inputMode="decimal"
+              className="w-full bg-black/20 border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#EA1D2C]"
+              placeholder="ex: 250.00"
+            />
+            <p className="text-[10px] text-[#A8A8B0] mt-1">O que o cliente paga.</p>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-[#A8A8B0] mb-1">Preço antes (opcional)</label>
+            <input
+              value={compareAtMT}
+              onChange={(e) => setCompareAtMT(e.target.value)}
+              inputMode="decimal"
+              className="w-full bg-black/20 border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#EA1D2C]"
+              placeholder="ex: 350.00"
+            />
+            <p className="text-[10px] text-[#A8A8B0] mt-1">Riscado na loja: &quot;de 350 por 250&quot;.</p>
+          </div>
         </div>
+        {compareAtMT.trim() !== '' && priceMT.trim() !== '' && (
+          <p className="text-xs text-[#EA1D2C] -mt-2">
+            Pré-visualização: <span className="line-through text-[#A8A8B0]">{compareAtMT} MT</span> → <b>{priceMT} MT</b>
+            {(() => {
+              const antes = parseFloat(compareAtMT.replace(',', '.'));
+              const agora = parseFloat(priceMT.replace(',', '.'));
+              return Number.isFinite(antes) && Number.isFinite(agora) && antes > agora
+                ? ` (-${Math.round((1 - agora / antes) * 100)}%)`
+                : '';
+            })()}
+          </p>
+        )}
 
         <div>
           <label className="block text-xs font-semibold text-[#A8A8B0] mb-1">Foto</label>

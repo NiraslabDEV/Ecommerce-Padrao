@@ -292,6 +292,31 @@ Painel admin reestilizado ao estilo iFood (referência do dono).
 - [x] Commit `feat(admin): iFood-style dashboard — sidebar layout + Pedidos KPIs/table`
 - [ ] Estender o reskin às outras tabs (Caixa/Análise/Cardápio/…) — pendente
 
+### EX.4 🟡 Cortes de preço (promoções) + Importar/Exportar produtos
+
+Baixar preço num produto ("de 1200 por 900"), numa categoria ("todos os perfumes -30%") ou na loja
+inteira ("tudo -50%") — **sem** reescrever o preço dos produtos. Exportar/importar a lista de produtos
+(JSON canónico ou CSV para Excel) pelo painel ou pelo CLI.
+
+- **Padrão + spec:** [`docs/precos-e-promocoes.md`](docs/precos-e-promocoes.md) · resumo em `CLAUDE.md` §20
+- Migration `20260728000003_promotions.sql`: `menu_items.compare_at_price_cents`, tabela `promotions`
+  (escopo store/category/item, pct/cents, janela de datas, RLS staff), funções
+  `promo_discount_cents` / `effective_price_cents` / `effective_price`, `get_menu` + `get_related_products`
+  + `create_order` a usar a MESMA função, `import_menu` com `compare_at_price_cents`, `export_menu()`.
+- Espelho TS (preview/testes): `packages/core/src/pricing.ts`; import/export: `menu-export.ts` (+ CSV).
+- Painel: `Catálogo` → abas **Promoções** e **Importar / Exportar** (`promotions-section.tsx`, `menu-io-section.tsx`).
+- Loja: preço riscado + badge `-N%` (`PriceWithCut`/`DiscountBadge` em `menu-ui.tsx`) no card, PDP e relacionados.
+- CLI: `pnpm menu:export [ficheiro.json|.csv]`; `pnpm menu:import` passa a aceitar CSV.
+
+**DoD:**
+- [x] Campanha de loja/categoria/produto muda o preço na vitrine E na cobrança (mesma função SQL)
+- [x] Descontos não acumulam (vence o maior); expirada/desligada não corta; preço nunca fica negativo
+- [x] Preço adulterado no payload continua ignorado pelo `create_order`
+- [x] Export → editar → import faz round-trip sem perder nada (JSON e CSV, incl. `preco_antes`)
+- [x] `pnpm lint` + `pnpm test` verdes (**105 testes core**, +40 novos) e **9 testes de integração**
+      (`packages/db/tests/promotions.test.ts`) verdes contra o Supabase local, com a migration aplicada
+- [ ] Aplicar a migration `20260728000003` na BD cloud (produção) — pendente
+
 ---
 
 ## FASE 4 — Marketing & Tracking (GTM + GA4 + Meta + Ads + CAPI) — spec COMPLETA

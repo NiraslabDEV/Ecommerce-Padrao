@@ -19,6 +19,9 @@ export const menuImportItemSchema = z.object({
   description: z.string().max(500).optional().default(''),
   // preço em MT decimal: número (130, 25.5) ou string ("130", "25.50")
   price: z.union([z.number(), z.string()]),
+  // preço ANTES do corte ("de 1200 por 900") — riscado na loja. Opcional.
+  // Ignorado se ≤ price (não inventa desconto). Ver docs/precos-e-promocoes.md.
+  compare_at_price: z.union([z.number(), z.string()]).nullish(),
   photo_url: z.string().optional().default(''),
   available: z.boolean().optional().default(true),
   track_stock: z.boolean().optional().default(false),
@@ -47,6 +50,8 @@ export interface NormalizedMenuItem {
   name: string;
   description: string;
   price_cents: Cents;
+  /** Preço riscado ("de X"); null quando não há corte manual. */
+  compare_at_price_cents: Cents | null;
   photo_url: string;
   available: boolean;
   track_stock: boolean;
@@ -85,10 +90,26 @@ export function normalizeMenuImport(raw: unknown): NormalizedMenu {
         if (!Number.isFinite(n) || n < 0) {
           throw new Error(`Preço inválido no item "${i.name}": ${JSON.stringify(i.price)}`);
         }
+        const price_cents = decimalStringToCents(priceStr);
+
+        // "de X por Y": só vale se X > Y. Caso contrário fica null (sem desconto falso).
+        let compare_at_price_cents: Cents | null = null;
+        const rawCompare = i.compare_at_price;
+        if (rawCompare !== null && rawCompare !== undefined && String(rawCompare).trim() !== '') {
+          const compareStr = typeof rawCompare === 'number' ? rawCompare.toFixed(2) : rawCompare.trim();
+          const cn = parseFloat(compareStr);
+          if (!Number.isFinite(cn) || cn < 0) {
+            throw new Error(`Preço antes (compare_at_price) inválido no item "${i.name}": ${JSON.stringify(rawCompare)}`);
+          }
+          const compareCents = decimalStringToCents(compareStr);
+          compare_at_price_cents = compareCents > price_cents ? compareCents : null;
+        }
+
         return {
           name: i.name.trim(),
           description: i.description.trim(),
-          price_cents: decimalStringToCents(priceStr),
+          price_cents,
+          compare_at_price_cents,
           photo_url: i.photo_url.trim(),
           available: i.available,
           track_stock: i.track_stock,

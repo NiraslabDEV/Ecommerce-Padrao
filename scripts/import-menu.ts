@@ -1,11 +1,13 @@
 #!/usr/bin/env node
-// pnpm menu:import <ficheiro.json> [--dry-run]
-// Importa um cardápio no formato canónico (docs/menu-format.md) para a BD via RPC import_menu.
+// pnpm menu:import <ficheiro.json|ficheiro.csv> [--dry-run]
+// Importa uma lista de produtos no formato canónico (docs/menu-format.md) via RPC import_menu.
+// Aceita JSON canónico ou CSV (folha de Excel — ver docs/menu-format.md §CSV).
 // Valida + converte preços (centavos) com packages/core; envia para o Supabase com a service role.
 
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { normalizeMenuImport } from '../packages/core/src/menu-import';
+import { csvToMenu } from '../packages/core/src/menu-export';
 // @ts-expect-error — módulo .mjs sem tipos (partilhado com setup-client)
 import { parseEnvFile } from './lib/validate-config.mjs';
 
@@ -25,17 +27,28 @@ const args = process.argv.slice(2);
 const dryRun = args.includes('--dry-run');
 const fileArg = args.find((a) => !a.startsWith('--'));
 
-if (!fileArg) fail('Indica o ficheiro:  pnpm menu:import caminho/menu.json [--dry-run]');
+if (!fileArg) fail('Indica o ficheiro:  pnpm menu:import caminho/menu.json|.csv [--dry-run]');
 
 const path = resolve(process.cwd(), fileArg);
 if (!existsSync(path)) fail(`Ficheiro não encontrado: ${path}`);
 
+// remove BOM (ficheiros gerados em Windows/Excel trazem-no)
+const text = readFileSync(path, 'utf8').replace(/^\uFEFF/, '');
+const isCsv = path.toLowerCase().endsWith('.csv');
+
 let raw: unknown;
-try {
-  // remove BOM (ficheiros gerados em Windows/editores podem trazê-lo)
-  raw = JSON.parse(readFileSync(path, 'utf8').replace(/^﻿/, ''));
-} catch (e) {
-  fail('JSON inválido: ' + (e as Error).message);
+if (isCsv) {
+  try {
+    raw = csvToMenu(text);
+  } catch (e) {
+    fail('CSV inválido: ' + (e as Error).message);
+  }
+} else {
+  try {
+    raw = JSON.parse(text);
+  } catch (e) {
+    fail('JSON inválido: ' + (e as Error).message);
+  }
 }
 
 let menu;
@@ -51,7 +64,8 @@ console.log(c.bold(`\n📋 ${nCats} categoria(s), ${nItems} item(s)`));
 for (const cat of menu.categories) {
   console.log('  ' + c.bold(cat.name));
   for (const it of cat.items) {
-    console.log(c.dim(`    - ${it.name}  ${(it.price_cents / 100).toFixed(2)} MT`));
+    const antes = it.compare_at_price_cents ? c.dim(`  (antes ${(it.compare_at_price_cents / 100).toFixed(2)} MT)`) : '';
+    console.log(c.dim(`    - ${it.name}  ${(it.price_cents / 100).toFixed(2)} MT`) + antes);
   }
 }
 
