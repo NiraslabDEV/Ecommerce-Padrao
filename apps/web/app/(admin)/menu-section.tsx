@@ -23,6 +23,8 @@ interface Item {
   description: string | null;
   price_cents: number;
   photo_url: string | null;
+  photo_url_2: string | null;
+  video_url: string | null;
   available: boolean;
   track_stock: boolean;
   stock_qty: number;
@@ -109,7 +111,7 @@ export function MenuSection() {
     const [{ data: cats }, { data: its }] = await Promise.all([
       supabase.from('menu_categories').select('id, name, station, sort, active, photo_url').order('sort'),
       supabase.from('menu_items')
-        .select('id, category_id, name, description, price_cents, photo_url, available, track_stock, stock_qty, sort')
+        .select('id, category_id, name, description, price_cents, photo_url, photo_url_2, video_url, available, track_stock, stock_qty, sort')
         .order('sort'),
     ]);
     setCategories((cats ?? []) as Category[]);
@@ -170,6 +172,23 @@ export function MenuSection() {
     if (!confirm('Apagar este item?')) return;
     const { error: err } = await supabase.from('menu_items').delete().eq('id', id);
     if (err) { setError(`Erro: ${err.message}`); return; }
+    refetchMenu();
+  }
+
+  // Troca a posição do item com o vizinho (só dentro da mesma categoria) —
+  // é o `sort` que decide a ordem na loja, então trocar os valores basta.
+  async function moveItem(item: Item, direction: 'up' | 'down') {
+    const siblings = items.filter((i) => i.category_id === item.category_id);
+    const idx = siblings.findIndex((i) => i.id === item.id);
+    const neighborIdx = direction === 'up' ? idx - 1 : idx + 1;
+    if (neighborIdx < 0 || neighborIdx >= siblings.length) return;
+    const neighbor = siblings[neighborIdx];
+
+    const [{ error: err1 }, { error: err2 }] = await Promise.all([
+      supabase.from('menu_items').update({ sort: neighbor.sort }).eq('id', item.id),
+      supabase.from('menu_items').update({ sort: item.sort }).eq('id', neighbor.id),
+    ]);
+    if (err1 || err2) { setError(`Erro ao reordenar: ${(err1 ?? err2)?.message}`); return; }
     refetchMenu();
   }
 
@@ -276,8 +295,26 @@ export function MenuSection() {
               </div>
 
               <ul className="divide-y divide-white/[0.06]">
-                {items.filter((i) => i.category_id === cat.id).map((item) => (
+                {items.filter((i) => i.category_id === cat.id).map((item, idx, siblings) => (
                   <li key={item.id} className="px-4 py-3 flex items-center gap-3">
+                    <div className="flex flex-col shrink-0">
+                      <button
+                        onClick={() => moveItem(item, 'up')}
+                        disabled={idx === 0}
+                        aria-label={`Mover ${item.name} para cima`}
+                        className="text-[#A8A8B0] text-xs leading-none px-1 py-0.5 hover:text-white disabled:opacity-20 disabled:hover:text-[#A8A8B0]"
+                      >
+                        ▲
+                      </button>
+                      <button
+                        onClick={() => moveItem(item, 'down')}
+                        disabled={idx === siblings.length - 1}
+                        aria-label={`Mover ${item.name} para baixo`}
+                        className="text-[#A8A8B0] text-xs leading-none px-1 py-0.5 hover:text-white disabled:opacity-20 disabled:hover:text-[#A8A8B0]"
+                      >
+                        ▼
+                      </button>
+                    </div>
                     {item.photo_url ? (
                       <img src={item.photo_url} alt="" className="w-12 h-12 rounded-lg object-cover shrink-0" />
                     ) : (
@@ -285,7 +322,7 @@ export function MenuSection() {
                     )}
                     <div className="flex-1 min-w-0">
                       <p className={`font-semibold text-sm ${item.available ? 'text-white' : 'text-gray-500 line-through'}`}>
-                        {item.name}
+                        {item.name}{item.video_url && <span className="ml-1.5 text-[10px] font-bold text-[#EA1D2C] align-middle">▶ VÍDEO</span>}
                       </p>
                       <p className="text-[#EA1D2C] font-bold text-sm">{formatMT(item.price_cents)}</p>
                       {item.track_stock && (
@@ -457,6 +494,10 @@ function ItemModal({
     item ? centsToDecimalString(item.price_cents) : ''
   );
   const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photo2File, setPhoto2File] = useState<File | null>(null);
+  const [removePhoto2, setRemovePhoto2] = useState(false);
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [removeVideo, setRemoveVideo] = useState(false);
   const [trackStock, setTrackStock] = useState(item?.track_stock ?? false);
   const [stockQty, setStockQty] = useState(item?.stock_qty ?? 0);
   const [saving, setSaving] = useState(false);
@@ -493,11 +534,45 @@ function ItemModal({
       photoUrl = supabase.storage.from('menu-photos').getPublicUrl(path).data.publicUrl;
     }
 
+    // 2ª foto (opcional) — ativa o efeito de crossfade automático no card/PDP.
+    let photoUrl2 = removePhoto2 ? null : item?.photo_url_2 ?? null;
+    if (photo2File) {
+      const ext = photo2File.name.split('.').pop()?.toLowerCase() ?? 'jpg';
+      const path = `${crypto.randomUUID()}.${ext}`;
+      const { error: up2Err } = await supabase.storage
+        .from('menu-photos')
+        .upload(path, photo2File, { cacheControl: '3600', upsert: false });
+      if (up2Err) {
+        setError(`Erro no upload da 2ª foto: ${up2Err.message}`);
+        setSaving(false);
+        return;
+      }
+      photoUrl2 = supabase.storage.from('menu-photos').getPublicUrl(path).data.publicUrl;
+    }
+
+    // Vídeo curto (showcase) — bucket storefront-assets, já aceita video/mp4|webm até 50MB.
+    let videoUrl = removeVideo ? null : item?.video_url ?? null;
+    if (videoFile) {
+      const ext = videoFile.name.split('.').pop()?.toLowerCase() ?? 'mp4';
+      const path = `product-videos/${crypto.randomUUID()}.${ext}`;
+      const { error: vidErr } = await supabase.storage
+        .from('storefront-assets')
+        .upload(path, videoFile, { cacheControl: '3600', upsert: false });
+      if (vidErr) {
+        setError(`Erro no upload do vídeo: ${vidErr.message}`);
+        setSaving(false);
+        return;
+      }
+      videoUrl = supabase.storage.from('storefront-assets').getPublicUrl(path).data.publicUrl;
+    }
+
     const payload = {
       name: name.trim(),
       description: description.trim() || null,
       price_cents: priceCents,
       photo_url: photoUrl,
+      photo_url_2: photoUrl2,
+      video_url: videoUrl,
       track_stock: trackStock,
       stock_qty: trackStock ? stockQty : 0,
     };
@@ -569,6 +644,60 @@ function ItemModal({
           />
           {item?.photo_url && !photoFile && (
             <p className="text-xs text-[#A8A8B0] mt-1">Já tem foto. Escolhe outra para substituir.</p>
+          )}
+        </div>
+
+        <div>
+          <label className="block text-xs font-semibold text-[#A8A8B0] mb-1">
+            2ª foto (opcional — ativa efeito de crossfade automático)
+          </label>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={(e) => { setPhoto2File(e.target.files?.[0] ?? null); setRemovePhoto2(false); }}
+            className="w-full text-sm text-[#A8A8B0]"
+          />
+          {item?.photo_url_2 && !photo2File && !removePhoto2 && (
+            <div className="flex items-center justify-between mt-1">
+              <p className="text-xs text-[#A8A8B0]">Já tem 2ª foto. Escolhe outra para substituir.</p>
+              <button
+                type="button"
+                onClick={() => setRemovePhoto2(true)}
+                className="text-xs text-red-400 hover:underline"
+              >
+                Remover
+              </button>
+            </div>
+          )}
+          {removePhoto2 && (
+            <p className="text-xs text-[#A8A8B0] mt-1">2ª foto será removida ao guardar (volta ao efeito zoom de foto única).</p>
+          )}
+        </div>
+
+        <div>
+          <label className="block text-xs font-semibold text-[#A8A8B0] mb-1">
+            Vídeo (opcional — produto em destaque, loop mudo, mp4/webm até 50MB)
+          </label>
+          <input
+            type="file"
+            accept="video/mp4,video/webm,video/*"
+            onChange={(e) => { setVideoFile(e.target.files?.[0] ?? null); setRemoveVideo(false); }}
+            className="w-full text-sm text-[#A8A8B0]"
+          />
+          {item?.video_url && !videoFile && !removeVideo && (
+            <div className="flex items-center justify-between mt-1">
+              <p className="text-xs text-[#A8A8B0]">Já tem vídeo. Escolhe outro para substituir.</p>
+              <button
+                type="button"
+                onClick={() => setRemoveVideo(true)}
+                className="text-xs text-red-400 hover:underline"
+              >
+                Remover vídeo
+              </button>
+            </div>
+          )}
+          {removeVideo && (
+            <p className="text-xs text-[#A8A8B0] mt-1">Vídeo será removido ao guardar.</p>
           )}
         </div>
 
