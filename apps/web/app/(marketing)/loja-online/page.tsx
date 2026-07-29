@@ -7,8 +7,8 @@ import { Reveal, StickyCta, CountUp } from './ui';
    ⚙️  CONFIGURAR ANTES DE PUBLICAR  (é só isto)
    ══════════════════════════════════════════════════════════════════════════ */
 const CONTACT = {
-  /** Número de WhatsApp em formato internacional, só dígitos. TROCAR PELO TEU. */
-  whatsapp: '258840000000',
+  /** Número de WhatsApp em formato internacional, só dígitos (sem +, sem espaços). */
+  whatsapp: '27634851904',
   email: 'niraslab.dev@gmail.com',
   /** Link para a loja demo (a própria instância). */
   demo: '/menu',
