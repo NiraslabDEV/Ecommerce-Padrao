@@ -55,7 +55,8 @@ export function StickyCta({ href, price }: { href: string; price: string }) {
       className="fixed inset-x-0 bottom-0 z-40 border-t p-3 backdrop-blur-xl transition-transform duration-300 md:hidden"
       style={{
         borderColor: 'var(--lp-line)',
-        background: 'rgba(8,7,10,.86)',
+        background: 'rgba(255,255,255,.88)',
+        boxShadow: '0 -8px 30px -18px rgba(7,42,63,.45)',
         transform: show ? 'translateY(0)' : 'translateY(110%)',
         paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))',
       }}
@@ -65,7 +66,7 @@ export function StickyCta({ href, price }: { href: string; price: string }) {
           <p className="text-[11px] uppercase tracking-widest" style={{ color: 'var(--lp-mute)' }}>
             Implementação completa
           </p>
-          <p className="text-lg font-bold leading-tight" style={{ color: 'var(--lp-ink)' }}>
+          <p className="text-lg font-extrabold leading-tight" style={{ color: 'var(--lp-ink)' }}>
             {price}
           </p>
         </div>
@@ -73,8 +74,8 @@ export function StickyCta({ href, price }: { href: string; price: string }) {
           href={href}
           target="_blank"
           rel="noopener noreferrer"
-          className="shrink-0 cursor-pointer rounded-xl px-5 py-3 text-sm font-bold text-black transition-transform duration-200 active:scale-95"
-          style={{ background: 'linear-gradient(135deg,#f6d488 0%,#e5a93c 100%)' }}
+          className="shrink-0 cursor-pointer rounded-xl px-5 py-3 text-sm font-bold text-white transition-transform duration-200 active:scale-95"
+          style={{ background: 'var(--lp-grad)', boxShadow: 'var(--lp-sh-cta)' }}
         >
           Falar no WhatsApp
         </a>

@@ -382,8 +382,12 @@ const GUARANTEES = [
 function Kicker({ children }: { children: React.ReactNode }) {
   return (
     <p
-      className="mb-4 inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em]"
-      style={{ borderColor: 'var(--lp-line-2)', color: 'var(--lp-gold)', background: 'rgba(229,169,60,.06)' }}
+      className="mb-5 inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-[11px] font-bold uppercase tracking-[0.16em]"
+      style={{
+        borderColor: 'rgba(2,132,199,.22)',
+        color: 'var(--lp-blue-deep)',
+        background: 'rgba(2,132,199,.07)',
+      }}
     >
       {children}
     </p>
@@ -393,7 +397,7 @@ function Kicker({ children }: { children: React.ReactNode }) {
 function H2({ children }: { children: React.ReactNode }) {
   return (
     <h2
-      className="text-balance font-display text-[clamp(2.1rem,6.2vw,4.2rem)] font-normal uppercase leading-[0.95] tracking-tight"
+      className="text-balance text-[clamp(2rem,5.2vw,3.5rem)] font-extrabold leading-[1.05] tracking-[-0.032em]"
       style={{ color: 'var(--lp-ink)' }}
     >
       {children}
@@ -415,8 +419,8 @@ function CtaPrimary({ children, className = '' }: { children: React.ReactNode; c
       href={WA}
       target="_blank"
       rel="noopener noreferrer"
-      className={`group inline-flex cursor-pointer items-center justify-center gap-2.5 rounded-2xl px-7 py-4 text-[15px] font-bold text-black transition-all duration-200 hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-4 ${className}`}
-      style={{ background: 'linear-gradient(135deg,#f6d488 0%,#e5a93c 55%,#d1902a 100%)' }}
+      className={`group inline-flex cursor-pointer items-center justify-center gap-2.5 rounded-2xl px-7 py-4 text-[15px] font-bold text-white transition-all duration-200 hover:brightness-[1.12] focus-visible:outline-2 focus-visible:outline-offset-4 ${className}`}
+      style={{ background: 'var(--lp-grad)', boxShadow: 'var(--lp-sh-cta)' }}
     >
       <WhatsAppIcon className="h-[18px] w-[18px]" />
       {children}
@@ -429,8 +433,8 @@ function CtaGhost({ href, children }: { href: string; children: React.ReactNode 
   return (
     <a
       href={href}
-      className="inline-flex cursor-pointer items-center justify-center gap-2.5 rounded-2xl border px-7 py-4 text-[15px] font-semibold transition-colors duration-200"
-      style={{ borderColor: 'var(--lp-line-2)', color: 'var(--lp-ink)' }}
+      className="inline-flex cursor-pointer items-center justify-center gap-2.5 rounded-2xl border bg-white px-7 py-4 text-[15px] font-semibold transition-all duration-200 hover:border-[rgba(2,132,199,.42)]"
+      style={{ borderColor: 'var(--lp-line-2)', color: 'var(--lp-ink)', boxShadow: 'var(--lp-sh-1)' }}
     >
       {children}
     </a>
@@ -447,23 +451,28 @@ export default function LandingPage() {
       className="lp relative overflow-x-clip"
       style={{ background: 'var(--lp-bg)', color: 'var(--lp-ink)', fontFamily: 'var(--font-body)' }}
     >
-      {/* ─── Navbar flutuante ─────────────────────────────────────────── */}
-      <header className="sticky top-0 z-30 border-b backdrop-blur-xl" style={{ borderColor: 'var(--lp-line)', background: 'rgba(8,7,10,.72)' }}>
+      {/* ─── Navbar ───────────────────────────────────────────────────── */}
+      <header
+        className="sticky top-0 z-30 border-b backdrop-blur-xl"
+        style={{ borderColor: 'var(--lp-line)', background: 'rgba(255,255,255,.80)' }}
+      >
         <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-3.5">
           <div className="flex items-center gap-2.5">
             <span
-              className="grid h-8 w-8 place-items-center rounded-lg text-black"
-              style={{ background: 'linear-gradient(135deg,#f6d488,#e5a93c)' }}
+              className="grid h-8 w-8 place-items-center rounded-xl text-white"
+              style={{ background: 'linear-gradient(135deg,#0ea5e9,#0369a1)', boxShadow: 'var(--lp-sh-cta)' }}
             >
               <Icon name="zap" className="h-4 w-4" strokeWidth={2.2} />
             </span>
-            <span className="font-display text-xl uppercase tracking-wider">Niraslab</span>
+            <span className="text-lg font-extrabold tracking-[-0.02em]" style={{ color: 'var(--lp-ink)' }}>
+              Niraslab
+            </span>
           </div>
           <div className="flex items-center gap-2">
             <a
               href={CONTACT.demo}
-              className="hidden cursor-pointer rounded-xl border px-4 py-2 text-sm font-semibold transition-colors duration-200 sm:inline-block"
-              style={{ borderColor: 'var(--lp-line-2)' }}
+              className="hidden cursor-pointer rounded-xl border px-4 py-2 text-sm font-semibold transition-colors duration-200 hover:border-[rgba(2,132,199,.42)] sm:inline-block"
+              style={{ borderColor: 'var(--lp-line-2)', color: 'var(--lp-ink)' }}
             >
               Ver loja demo
             </a>
@@ -471,8 +480,8 @@ export default function LandingPage() {
               href={WA}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex cursor-pointer items-center gap-2 rounded-xl px-4 py-2 text-sm font-bold text-black transition-all duration-200 hover:brightness-110"
-              style={{ background: 'linear-gradient(135deg,#f6d488,#e5a93c)' }}
+              className="inline-flex cursor-pointer items-center gap-2 rounded-xl px-4 py-2 text-sm font-bold text-white transition-all duration-200 hover:brightness-[1.12]"
+              style={{ background: 'var(--lp-grad)', boxShadow: 'var(--lp-sh-cta)' }}
             >
               <WhatsAppIcon className="h-4 w-4" />
               Quero a minha loja
@@ -482,39 +491,54 @@ export default function LandingPage() {
       </header>
 
       {/* ─── HERO ─────────────────────────────────────────────────────── */}
-      <section className="lp-aurora lp-grid relative isolate overflow-hidden px-5 pb-20 pt-14 md:pb-28 md:pt-20">
+      <section className="lp-aurora relative isolate overflow-hidden px-5 pb-20 pt-14 md:pb-28 md:pt-20">
+        <div className="lp-grid absolute inset-0 -z-10" aria-hidden="true" />
         <div className="relative mx-auto grid max-w-6xl gap-14 lg:grid-cols-[1.15fr_0.85fr] lg:items-center">
           <div>
             <Reveal>
               <div
-                className="mb-6 inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-xs font-semibold"
-                style={{ borderColor: 'var(--lp-line-2)', color: 'var(--lp-gold)', background: 'rgba(229,169,60,.07)' }}
+                className="mb-6 inline-flex items-center gap-2 rounded-full border bg-white px-3.5 py-1.5 text-xs font-bold"
+                style={{ borderColor: 'rgba(2,132,199,.22)', color: 'var(--lp-blue-deep)' }}
               >
-                <span className="lp-pulse h-1.5 w-1.5 rounded-full" style={{ background: 'var(--lp-gold)' }} />
+                <span className="lp-pulse h-1.5 w-1.5 rounded-full" style={{ background: 'var(--lp-blue)' }} />
                 Para negócios em Moçambique
               </div>
 
-              <h1 className="text-balance font-display text-[clamp(2.8rem,9vw,6.4rem)] font-normal uppercase leading-[0.9] tracking-tight">
+              <h1
+                className="text-balance text-[clamp(2.6rem,7.4vw,5.2rem)] font-extrabold leading-[1.02] tracking-[-0.04em]"
+                style={{ color: 'var(--lp-ink)' }}
+              >
                 A sua loja online
                 <br />
                 <span className="lp-shine">pronta a vender</span>
               </h1>
 
               <p className="mt-7 max-w-xl text-[18px] leading-relaxed" style={{ color: 'var(--lp-dim)' }}>
-                Site próprio com o seu nome. Pagamentos <strong style={{ color: 'var(--lp-ink)' }}>M-Pesa</strong> e{' '}
-                <strong style={{ color: 'var(--lp-ink)' }}>e-Mola</strong>, entregas por zona, promoções, vídeo nos
-                produtos e um painel que você controla do telemóvel.
+                Site próprio com o seu nome. Pagamentos{' '}
+                <strong className="font-bold" style={{ color: 'var(--lp-ink)' }}>
+                  M-Pesa
+                </strong>{' '}
+                e{' '}
+                <strong className="font-bold" style={{ color: 'var(--lp-ink)' }}>
+                  e-Mola
+                </strong>
+                , entregas por zona, promoções, vídeo nos produtos e um painel que você controla do telemóvel.
                 <br />
-                <span style={{ color: 'var(--lp-ink)' }}>Montamos tudo por si. Uma vez.</span>
+                <span className="font-semibold" style={{ color: 'var(--lp-ink)' }}>
+                  Montamos tudo por si. Uma vez.
+                </span>
               </p>
             </Reveal>
 
             <Reveal delay={120}>
               <div
-                className="mt-8 inline-flex flex-wrap items-end gap-x-4 gap-y-1 rounded-2xl border px-5 py-4"
-                style={{ borderColor: 'var(--lp-line-2)', background: 'rgba(255,255,255,.03)' }}
+                className="mt-8 inline-flex flex-wrap items-end gap-x-4 gap-y-1 rounded-2xl border bg-white px-5 py-4"
+                style={{ borderColor: 'rgba(2,132,199,.24)', boxShadow: 'var(--lp-sh-2)' }}
               >
-                <span className="font-display text-[clamp(2.6rem,7vw,3.6rem)] leading-none" style={{ color: 'var(--lp-gold)' }}>
+                <span
+                  className="text-[clamp(2.4rem,6.4vw,3.2rem)] font-extrabold leading-none tracking-[-0.035em]"
+                  style={{ color: 'var(--lp-blue-deep)' }}
+                >
                   {PRICE}
                 </span>
                 <span className="pb-1 text-sm" style={{ color: 'var(--lp-mute)' }}>
@@ -529,8 +553,8 @@ export default function LandingPage() {
                 <CtaGhost href="#tudo-incluido">Ver tudo o que faz</CtaGhost>
               </div>
               <p className="mt-4 flex items-center gap-2 text-sm" style={{ color: 'var(--lp-mute)' }}>
-                <span style={{ color: 'var(--lp-gold)' }}>
-                  <Icon name="check" className="h-4 w-4" strokeWidth={2.4} />
+                <span style={{ color: 'var(--lp-blue)' }}>
+                  <Icon name="check" className="h-4 w-4" strokeWidth={2.6} />
                 </span>
                 Conversa inicial sem compromisso · Pronta em 48–72 horas
               </p>
@@ -541,12 +565,16 @@ export default function LandingPage() {
           <Reveal delay={260} className="justify-self-center">
             <div className="relative">
               <div
-                className="absolute -inset-10 -z-10 rounded-full opacity-60 blur-3xl"
-                style={{ background: 'radial-gradient(circle,rgba(229,169,60,.30),transparent 65%)' }}
+                className="absolute -inset-12 -z-10 rounded-full blur-3xl"
+                style={{ background: 'radial-gradient(circle,rgba(14,165,233,.34),transparent 66%)' }}
               />
               <div
-                className="relative w-[268px] rounded-[2.6rem] border p-2.5 shadow-2xl sm:w-[300px]"
-                style={{ borderColor: 'var(--lp-line-2)', background: 'linear-gradient(160deg,#221f1c,#0d0b0e)' }}
+                className="relative w-[268px] rounded-[2.6rem] border p-2.5 sm:w-[300px]"
+                style={{
+                  borderColor: 'rgba(7,42,63,.14)',
+                  background: 'linear-gradient(160deg,#f4fafe,#dfeef8)',
+                  boxShadow: '0 30px 70px -30px rgba(3,105,161,.55), 0 2px 8px rgba(7,42,63,.06)',
+                }}
               >
                 <div className="relative aspect-[9/18.5] overflow-hidden rounded-[2rem]" style={{ background: '#0d0d0d' }}>
                   <Image
@@ -559,18 +587,19 @@ export default function LandingPage() {
                   />
                   <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black via-black/70 to-transparent" />
                   <div className="absolute inset-x-4 bottom-4 space-y-2.5">
-                    <div className="rounded-2xl border p-3.5 backdrop-blur-md" style={{ borderColor: 'rgba(255,255,255,.14)', background: 'rgba(20,20,20,.72)' }}>
-                      <p className="text-[10px] uppercase tracking-widest" style={{ color: 'var(--lp-mute)' }}>
-                        Novo pedido
-                      </p>
-                      <p className="mt-0.5 text-sm font-bold">ENC-0042 · 1.450 MT</p>
-                      <p className="mt-0.5 text-[11px]" style={{ color: 'var(--lp-dim)' }}>
+                    <div
+                      className="rounded-2xl border p-3.5 backdrop-blur-md"
+                      style={{ borderColor: 'rgba(255,255,255,.18)', background: 'rgba(255,255,255,.12)' }}
+                    >
+                      <p className="text-[10px] uppercase tracking-widest text-white/70">Novo pedido</p>
+                      <p className="mt-0.5 text-sm font-bold text-white">ENC-0042 · 1.450 MT</p>
+                      <p className="mt-0.5 text-[11px]" style={{ color: '#7dd3fc' }}>
                         M-Pesa confirmado · Entrega Costa do Sol
                       </p>
                     </div>
                     <div
-                      className="rounded-2xl py-3 text-center text-sm font-bold text-black"
-                      style={{ background: 'linear-gradient(135deg,#f6d488,#e5a93c)' }}
+                      className="rounded-2xl py-3 text-center text-sm font-bold text-white"
+                      style={{ background: 'linear-gradient(135deg,#0ea5e9,#0369a1)' }}
                     >
                       Finalizar pedido
                     </div>
@@ -583,12 +612,18 @@ export default function LandingPage() {
       </section>
 
       {/* ─── Faixa de garantias (marquee) ─────────────────────────────── */}
-      <div className="border-y py-4" style={{ borderColor: 'var(--lp-line)', background: 'rgba(255,255,255,.02)' }}>
+      <div className="border-y py-4" style={{ borderColor: 'var(--lp-line)', background: 'var(--lp-bg-2)' }}>
         <div className="flex overflow-hidden [mask-image:linear-gradient(90deg,transparent,#000_8%,#000_92%,transparent)]">
           <div className="lp-marquee flex shrink-0 items-center gap-8 pr-8">
             {[...GUARANTEES, ...GUARANTEES].map((g, i) => (
-              <span key={i} className="flex shrink-0 items-center gap-2.5 text-sm font-medium" style={{ color: 'var(--lp-dim)' }}>
-                <Icon name="check" className="h-4 w-4 shrink-0" strokeWidth={2.4} />
+              <span
+                key={i}
+                className="flex shrink-0 items-center gap-2.5 text-sm font-semibold"
+                style={{ color: 'var(--lp-dim)' }}
+              >
+                <span style={{ color: 'var(--lp-blue)' }}>
+                  <Icon name="check" className="h-4 w-4 shrink-0" strokeWidth={2.6} />
+                </span>
                 {g}
               </span>
             ))}
@@ -615,17 +650,14 @@ export default function LandingPage() {
           <div className="mt-14 grid gap-4 sm:grid-cols-2">
             {PROBLEMS.map((p, i) => (
               <Reveal key={p.t} delay={i * 90}>
-                <div
-                  className="h-full rounded-2xl border p-6 transition-colors duration-200 hover:border-[rgba(229,169,60,.32)]"
-                  style={{ borderColor: 'var(--lp-line)', background: 'var(--lp-card)' }}
-                >
+                <div className="lp-card h-full rounded-2xl p-6">
                   <span
                     className="mb-4 grid h-11 w-11 place-items-center rounded-xl"
-                    style={{ background: 'rgba(232,90,42,.12)', color: '#f08a5f' }}
+                    style={{ background: 'var(--lp-coral-soft)', color: 'var(--lp-coral)' }}
                   >
                     <Icon name={p.icon} className="h-5 w-5" />
                   </span>
-                  <h3 className="text-[17px] font-bold">{p.t}</h3>
+                  <h3 className="text-[17px] font-bold tracking-[-0.01em]">{p.t}</h3>
                   <p className="mt-2 text-[15px] leading-relaxed" style={{ color: 'var(--lp-dim)' }}>
                     {p.d}
                   </p>
@@ -637,7 +669,10 @@ export default function LandingPage() {
       </section>
 
       {/* ─── COMO O CLIENTE COMPRA ────────────────────────────────────── */}
-      <section className="relative overflow-hidden border-y px-5 py-24 md:py-32" style={{ borderColor: 'var(--lp-line)', background: 'var(--lp-bg-2)' }}>
+      <section
+        className="relative overflow-hidden border-y px-5 py-24 md:py-32"
+        style={{ borderColor: 'var(--lp-line)', background: 'var(--lp-bg-2)' }}
+      >
         <div className="mx-auto max-w-6xl">
           <Reveal>
             <Kicker>A experiência do seu cliente</Kicker>
@@ -648,14 +683,20 @@ export default function LandingPage() {
             </Lead>
           </Reveal>
 
-          <div className="mt-14 grid gap-px overflow-hidden rounded-2xl border sm:grid-cols-2 lg:grid-cols-3" style={{ borderColor: 'var(--lp-line)', background: 'var(--lp-line)' }}>
+          <div
+            className="mt-14 grid gap-px overflow-hidden rounded-3xl border sm:grid-cols-2 lg:grid-cols-3"
+            style={{ borderColor: 'var(--lp-line)', background: 'var(--lp-line)', boxShadow: 'var(--lp-sh-1)' }}
+          >
             {BUYER_STEPS.map((s, i) => (
               <Reveal key={s.n} delay={i * 70}>
-                <div className="h-full p-7" style={{ background: 'var(--lp-bg-2)' }}>
-                  <span className="font-display text-3xl" style={{ color: 'rgba(229,169,60,.55)' }}>
+                <div className="h-full bg-white p-7">
+                  <span
+                    className="text-2xl font-extrabold tracking-[-0.03em]"
+                    style={{ color: 'rgba(2,132,199,.55)' }}
+                  >
                     {s.n}
                   </span>
-                  <h3 className="mt-3 text-[17px] font-bold">{s.t}</h3>
+                  <h3 className="mt-3 text-[17px] font-bold tracking-[-0.01em]">{s.t}</h3>
                   <p className="mt-2 text-[15px] leading-relaxed" style={{ color: 'var(--lp-dim)' }}>
                     {s.d}
                   </p>
@@ -685,8 +726,7 @@ export default function LandingPage() {
             <Kicker>Tudo o que vem dentro</Kicker>
             <H2>
               Não é um site bonito.
-              <br />
-              É uma máquina de vender.
+              <br />É uma máquina de vender.
             </H2>
             <Lead>
               Tudo o que está aqui em baixo vem ligado no primeiro dia. Sem módulos extra, sem versão limitada, sem
@@ -697,33 +737,35 @@ export default function LandingPage() {
           <div className="mt-16 space-y-5">
             {GROUPS.map((g, gi) => (
               <Reveal key={g.title} delay={gi < 3 ? gi * 80 : 0}>
-                <div
-                  className="rounded-3xl border p-6 md:p-9"
-                  style={{ borderColor: 'var(--lp-line)', background: 'var(--lp-card)' }}
-                >
+                <div className="lp-card rounded-3xl p-6 md:p-9">
                   <div className="flex items-start gap-4 border-b pb-6" style={{ borderColor: 'var(--lp-line)' }}>
                     <span
-                      className="grid h-12 w-12 shrink-0 place-items-center rounded-xl"
-                      style={{ background: 'rgba(229,169,60,.12)', color: 'var(--lp-gold)' }}
+                      className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl text-white"
+                      style={{
+                        background: 'linear-gradient(135deg,#0ea5e9,#0369a1)',
+                        boxShadow: '0 8px 20px -10px rgba(2,132,199,.75)',
+                      }}
                     >
                       <Icon name={g.icon} className="h-[22px] w-[22px]" />
                     </span>
                     <div>
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--lp-gold)' }}>
+                      <p className="text-[11px] font-bold uppercase tracking-[0.16em]" style={{ color: 'var(--lp-blue-deep)' }}>
                         {g.kicker}
                       </p>
-                      <h3 className="mt-1 text-balance text-[21px] font-bold leading-tight md:text-[26px]">{g.title}</h3>
+                      <h3 className="mt-1 text-balance text-[21px] font-extrabold leading-tight tracking-[-0.025em] md:text-[26px]">
+                        {g.title}
+                      </h3>
                     </div>
                   </div>
 
                   <ul className={`mt-6 grid gap-x-8 gap-y-5 ${g.wide ? 'md:grid-cols-2 xl:grid-cols-3' : 'md:grid-cols-2'}`}>
                     {g.features.map((f) => (
                       <li key={f.t} className="flex gap-3">
-                        <span className="mt-0.5 shrink-0" style={{ color: 'var(--lp-gold)' }}>
-                          <Icon name="check" className="h-[18px] w-[18px]" strokeWidth={2.4} />
+                        <span className="mt-0.5 shrink-0" style={{ color: 'var(--lp-blue)' }}>
+                          <Icon name="check" className="h-[18px] w-[18px]" strokeWidth={2.6} />
                         </span>
                         <div>
-                          <p className="text-[15px] font-semibold leading-snug">{f.t}</p>
+                          <p className="text-[15px] font-bold leading-snug tracking-[-0.01em]">{f.t}</p>
                           <p className="mt-1 text-[14px] leading-relaxed" style={{ color: 'var(--lp-dim)' }}>
                             {f.d}
                           </p>
@@ -747,10 +789,13 @@ export default function LandingPage() {
             { v: 0, s: ' MT', l: 'de mensalidade à Niraslab', sub: 'paga a implementação uma vez' },
           ].map((n, i) => (
             <Reveal key={n.l} delay={i * 100}>
-              <p className="font-display text-[clamp(3rem,9vw,5rem)] leading-none" style={{ color: 'var(--lp-gold)' }}>
+              <p
+                className="text-[clamp(2.8rem,8vw,4.4rem)] font-extrabold leading-none tracking-[-0.04em]"
+                style={{ color: 'var(--lp-blue-deep)' }}
+              >
                 <CountUp to={n.v} suffix={n.s} />
               </p>
-              <p className="mt-3 text-[17px] font-semibold">{n.l}</p>
+              <p className="mt-3 text-[17px] font-bold tracking-[-0.01em]">{n.l}</p>
               <p className="mt-1 text-sm" style={{ color: 'var(--lp-mute)' }}>
                 {n.sub}
               </p>
@@ -773,25 +818,29 @@ export default function LandingPage() {
           <ol className="relative mt-14 space-y-4">
             {PROCESS.map((p, i) => (
               <Reveal key={p.n} delay={i * 70}>
-                <li
-                  className="grid gap-5 rounded-2xl border p-6 md:grid-cols-[auto_1fr_auto] md:items-center md:gap-8 md:p-7"
-                  style={{ borderColor: 'var(--lp-line)', background: 'var(--lp-card)' }}
-                >
+                <li className="lp-card grid gap-5 rounded-2xl p-6 md:grid-cols-[auto_1fr_auto] md:items-center md:gap-8 md:p-7">
                   <span
-                    className="grid h-12 w-12 shrink-0 place-items-center rounded-full border font-display text-2xl"
-                    style={{ borderColor: 'rgba(229,169,60,.4)', color: 'var(--lp-gold)' }}
+                    className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl text-xl font-extrabold text-white"
+                    style={{
+                      background: 'linear-gradient(135deg,#0ea5e9,#0369a1)',
+                      boxShadow: '0 8px 20px -10px rgba(2,132,199,.75)',
+                    }}
                   >
                     {p.n}
                   </span>
                   <div>
-                    <h3 className="text-[19px] font-bold">{p.t}</h3>
+                    <h3 className="text-[19px] font-extrabold tracking-[-0.02em]">{p.t}</h3>
                     <p className="mt-1.5 max-w-2xl text-[15px] leading-relaxed" style={{ color: 'var(--lp-dim)' }}>
                       {p.d}
                     </p>
                   </div>
                   <span
-                    className="justify-self-start rounded-full border px-3.5 py-1.5 text-xs font-semibold uppercase tracking-wider md:justify-self-end"
-                    style={{ borderColor: 'var(--lp-line-2)', color: 'var(--lp-gold)' }}
+                    className="justify-self-start rounded-full border px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider md:justify-self-end"
+                    style={{
+                      borderColor: 'rgba(2,132,199,.22)',
+                      color: 'var(--lp-blue-deep)',
+                      background: 'rgba(2,132,199,.07)',
+                    }}
                   >
                     {p.tag}
                   </span>
@@ -803,7 +852,11 @@ export default function LandingPage() {
       </section>
 
       {/* ─── PREÇO ────────────────────────────────────────────────────── */}
-      <section id="preco" className="lp-aurora relative scroll-mt-20 overflow-hidden border-y px-5 py-24 md:py-32" style={{ borderColor: 'var(--lp-line)', background: 'var(--lp-bg-2)' }}>
+      <section
+        id="preco"
+        className="lp-aurora relative scroll-mt-20 overflow-hidden border-y px-5 py-24 md:py-32"
+        style={{ borderColor: 'var(--lp-line)', background: 'var(--lp-bg-2)' }}
+      >
         <div className="relative mx-auto max-w-6xl">
           <Reveal>
             <div className="text-center">
@@ -815,36 +868,46 @@ export default function LandingPage() {
           <div className="mt-14 grid gap-5 lg:grid-cols-[1.25fr_0.75fr]">
             <Reveal>
               <div
-                className="relative h-full overflow-hidden rounded-3xl border p-7 md:p-10"
-                style={{ borderColor: 'rgba(229,169,60,.34)', background: 'linear-gradient(165deg,rgba(229,169,60,.10),rgba(255,255,255,.02) 45%)' }}
+                className="relative h-full overflow-hidden rounded-3xl border bg-white p-7 md:p-10"
+                style={{ borderColor: 'rgba(2,132,199,.30)', boxShadow: 'var(--lp-sh-2)' }}
               >
-                <p className="text-[11px] font-semibold uppercase tracking-[0.2em]" style={{ color: 'var(--lp-gold)' }}>
+                <div
+                  className="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full"
+                  style={{ background: 'radial-gradient(circle,rgba(6,182,212,.20),transparent 70%)' }}
+                  aria-hidden="true"
+                />
+                <p className="relative text-[11px] font-bold uppercase tracking-[0.18em]" style={{ color: 'var(--lp-blue-deep)' }}>
                   Implementação completa
                 </p>
-                <div className="mt-3 flex flex-wrap items-end gap-3">
-                  <span className="font-display text-[clamp(3.4rem,12vw,6rem)] leading-none" style={{ color: 'var(--lp-ink)' }}>
+                <div className="relative mt-3 flex flex-wrap items-end gap-3">
+                  <span
+                    className="text-[clamp(3rem,11vw,5.2rem)] font-extrabold leading-none tracking-[-0.045em]"
+                    style={{ color: 'var(--lp-ink)' }}
+                  >
                     {PRICE}
                   </span>
                   <span className="pb-2 text-[15px]" style={{ color: 'var(--lp-dim)' }}>
                     pagamento único
                   </span>
                 </div>
-                <p className="mt-3 text-[15px]" style={{ color: 'var(--lp-dim)' }}>
+                <p className="relative mt-3 text-[15px]" style={{ color: 'var(--lp-dim)' }}>
                   Paga por M-Pesa ou e-Mola. Sem mensalidade nossa, sem comissão sobre as suas vendas.
                 </p>
 
-                <ul className="mt-8 grid gap-3 sm:grid-cols-2">
+                <ul className="relative mt-8 grid gap-3 sm:grid-cols-2">
                   {INCLUDED.map((item) => (
                     <li key={item} className="flex gap-2.5 text-[15px]">
-                      <span className="mt-0.5 shrink-0" style={{ color: 'var(--lp-gold)' }}>
-                        <Icon name="check" className="h-[18px] w-[18px]" strokeWidth={2.4} />
+                      <span className="mt-0.5 shrink-0" style={{ color: 'var(--lp-blue)' }}>
+                        <Icon name="check" className="h-[18px] w-[18px]" strokeWidth={2.6} />
                       </span>
-                      <span style={{ color: 'var(--lp-ink)' }}>{item}</span>
+                      <span className="font-medium" style={{ color: 'var(--lp-ink)' }}>
+                        {item}
+                      </span>
                     </li>
                   ))}
                 </ul>
 
-                <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
+                <div className="relative mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
                   <CtaPrimary className="w-full sm:w-auto">Reservar a minha loja</CtaPrimary>
                   <p className="text-sm" style={{ color: 'var(--lp-mute)' }}>
                     Resposta no mesmo dia útil.
@@ -854,15 +917,15 @@ export default function LandingPage() {
             </Reveal>
 
             <Reveal delay={120}>
-              <div className="h-full rounded-3xl border p-7 md:p-8" style={{ borderColor: 'var(--lp-line)', background: 'var(--lp-card)' }}>
-                <h3 className="text-[19px] font-bold">O que não está incluído</h3>
+              <div className="lp-card h-full rounded-3xl p-7 md:p-8">
+                <h3 className="text-[19px] font-extrabold tracking-[-0.02em]">O que não está incluído</h3>
                 <p className="mt-2 text-sm" style={{ color: 'var(--lp-mute)' }}>
                   Preferimos dizer isto à frente do que na fatura.
                 </p>
                 <ul className="mt-7 space-y-6">
                   {NOT_INCLUDED.map((n) => (
                     <li key={n.t}>
-                      <p className="text-[15px] font-semibold">{n.t}</p>
+                      <p className="text-[15px] font-bold tracking-[-0.01em]">{n.t}</p>
                       <p className="mt-1 text-[14px] leading-relaxed" style={{ color: 'var(--lp-dim)' }}>
                         {n.d}
                       </p>
@@ -886,12 +949,16 @@ export default function LandingPage() {
           <div className="mt-12 space-y-3">
             {FAQ.map((f, i) => (
               <Reveal key={f.q} delay={i < 5 ? i * 60 : 0}>
-                <details className="lp-faq group rounded-2xl border" style={{ borderColor: 'var(--lp-line)', background: 'var(--lp-card)' }}>
-                  <summary className="flex cursor-pointer items-center justify-between gap-4 p-5 text-[16px] font-semibold md:p-6">
+                <details className="lp-faq lp-card group rounded-2xl">
+                  <summary className="flex cursor-pointer items-center justify-between gap-4 p-5 text-[16px] font-bold tracking-[-0.01em] md:p-6">
                     {f.q}
                     <span
                       className="lp-chev grid h-7 w-7 shrink-0 place-items-center rounded-full border text-lg leading-none transition-transform duration-200"
-                      style={{ borderColor: 'var(--lp-line-2)', color: 'var(--lp-gold)' }}
+                      style={{
+                        borderColor: 'rgba(2,132,199,.28)',
+                        color: 'var(--lp-blue-deep)',
+                        background: 'rgba(2,132,199,.07)',
+                      }}
                       aria-hidden="true"
                     >
                       +
@@ -908,7 +975,10 @@ export default function LandingPage() {
       </section>
 
       {/* ─── CTA FINAL ────────────────────────────────────────────────── */}
-      <section className="lp-aurora relative overflow-hidden border-t px-5 py-24 md:py-32" style={{ borderColor: 'var(--lp-line)' }}>
+      <section
+        className="lp-aurora relative overflow-hidden border-t px-5 py-24 md:py-32"
+        style={{ borderColor: 'var(--lp-line)', background: 'var(--lp-bg-2)' }}
+      >
         <div className="relative mx-auto max-w-3xl text-center">
           <Reveal>
             <H2>
@@ -937,29 +1007,35 @@ export default function LandingPage() {
       </section>
 
       {/* ─── FOOTER ───────────────────────────────────────────────────── */}
-      <footer className="border-t px-5 py-10" style={{ borderColor: 'var(--lp-line)' }}>
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-5 text-sm sm:flex-row" style={{ color: 'var(--lp-mute)' }}>
+      <footer className="border-t bg-white px-5 py-10" style={{ borderColor: 'var(--lp-line)' }}>
+        <div
+          className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-5 text-sm sm:flex-row"
+          style={{ color: 'var(--lp-mute)' }}
+        >
           <div className="flex items-center gap-2.5">
-            <span className="grid h-7 w-7 place-items-center rounded-lg text-black" style={{ background: 'linear-gradient(135deg,#f6d488,#e5a93c)' }}>
+            <span
+              className="grid h-7 w-7 place-items-center rounded-xl text-white"
+              style={{ background: 'linear-gradient(135deg,#0ea5e9,#0369a1)' }}
+            >
               <Icon name="zap" className="h-3.5 w-3.5" strokeWidth={2.4} />
             </span>
-            <span className="font-display text-lg uppercase tracking-wider" style={{ color: 'var(--lp-dim)' }}>
+            <span className="text-base font-extrabold tracking-[-0.02em]" style={{ color: 'var(--lp-ink)' }}>
               Niraslab
             </span>
           </div>
           <p>Lojas online para negócios moçambicanos.</p>
           <div className="flex items-center gap-5">
-            <a href={CONTACT.demo} className="cursor-pointer transition-colors duration-200 hover:text-[var(--lp-gold)]">
+            <a href={CONTACT.demo} className="cursor-pointer font-medium transition-colors duration-200 hover:text-[var(--lp-blue-deep)]">
               Loja demo
             </a>
-            <a href="#preco" className="cursor-pointer transition-colors duration-200 hover:text-[var(--lp-gold)]">
+            <a href="#preco" className="cursor-pointer font-medium transition-colors duration-200 hover:text-[var(--lp-blue-deep)]">
               Preço
             </a>
             <a
               href={WA}
               target="_blank"
               rel="noopener noreferrer"
-              className="cursor-pointer transition-colors duration-200 hover:text-[var(--lp-gold)]"
+              className="cursor-pointer font-medium transition-colors duration-200 hover:text-[var(--lp-blue-deep)]"
             >
               WhatsApp
             </a>
