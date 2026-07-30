@@ -40,7 +40,7 @@ export function Reveal({
 }
 
 /** Barra de ação fixa no fundo (mobile) — aparece depois do hero. */
-export function StickyCta({ href, price }: { href: string; price: string }) {
+export function StickyCta({ href, price, monthly }: { href: string; price: string; monthly?: string }) {
   const [show, setShow] = useState(false);
 
   useEffect(() => {
@@ -68,6 +68,11 @@ export function StickyCta({ href, price }: { href: string; price: string }) {
           </p>
           <p className="text-lg font-extrabold leading-tight" style={{ color: 'var(--lp-ink)' }}>
             {price}
+            {monthly ? (
+              <span className="ml-1.5 text-[12px] font-semibold" style={{ color: 'var(--lp-mute)' }}>
+                + {monthly}/mês
+              </span>
+            ) : null}
           </p>
         </div>
         <a
@@ -82,6 +87,11 @@ export function StickyCta({ href, price }: { href: string; price: string }) {
       </div>
     </div>
   );
+}
+
+/** 1000 → "1.000" (milhares com ponto, como o resto da página). */
+function groupThousands(n: number) {
+  return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 }
 
 /** Conta até ao valor quando entra no ecrã. */
@@ -113,7 +123,7 @@ export function CountUp({ to, suffix = '' }: { to: number; suffix?: string }) {
 
   return (
     <span ref={ref}>
-      {n}
+      {groupThousands(n)}
       {suffix}
     </span>
   );

@@ -14,22 +14,25 @@ const CONTACT = {
   demo: '/menu',
 };
 
-const PRICE = '5.000 MT';
-const PRICE_NOTE = 'pagamento único · sem mensalidade à Niraslab';
+const PRICE = '20.000 MT';
+const PRICE_NOTE = 'implementação · pagamento único';
+const PRICE_URGENCY = 'Este valor é o de agora — para quem começa este mês.';
+const MONTHLY = '1.500 MT';
+const MONTHLY_NOTE = 'por mês · alojamento, manutenção e suporte';
 
 const WA_MSG = encodeURIComponent(
-  'Olá Niraslab! Vi a página da loja online e quero a minha loja por 5.000 MT. Podemos falar?',
+  'Olá Niraslab! Vi a página da loja online e quero a minha loja por 20.000 MT + 1.500 MT por mês. Podemos falar?',
 );
 const WA = `https://wa.me/${CONTACT.whatsapp}?text=${WA_MSG}`;
 
 export const metadata: Metadata = {
-  title: 'A sua loja online pronta a vender — 5.000 MT | Niraslab',
+  title: 'A sua loja online pronta a vender — 20.000 MT | Niraslab',
   description:
-    'Loja online completa para o seu negócio em Moçambique: pagamentos M-Pesa e e-Mola (automáticos ou manuais), entregas por zona, painel de controlo, promoções, vídeo nos produtos e rastreamento de anúncios. Montamos tudo por 5.000 MT.',
+    'Loja online completa para o seu negócio em Moçambique: pagamentos M-Pesa e e-Mola (automáticos ou manuais), entregas por zona, painel de controlo, promoções, vídeo nos produtos e rastreamento de anúncios. Montamos tudo por 20.000 MT, mais 1.500 MT por mês de alojamento, manutenção e suporte.',
   openGraph: {
-    title: 'A sua loja online pronta a vender — 5.000 MT',
+    title: 'A sua loja online pronta a vender — 20.000 MT',
     description:
-      'M-Pesa e e-Mola, entregas por zona, painel no telemóvel, promoções e rastreamento completo. Montado por nós, chave na mão.',
+      'M-Pesa e e-Mola, entregas por zona, painel no telemóvel, promoções e rastreamento completo. Montado por nós, chave na mão: 20.000 MT + 1.500 MT/mês.',
     type: 'website',
     locale: 'pt_MZ',
   },
@@ -257,9 +260,9 @@ const PROCESS = [
   },
   {
     n: '2',
-    t: 'Confirma e paga os 5.000 MT',
-    d: 'Pagamento único de implementação, por M-Pesa ou e-Mola. A partir daqui o trabalho é nosso.',
-    tag: 'Pagamento único',
+    t: 'Confirma e paga a implementação',
+    d: 'Os 20.000 MT da montagem, por M-Pesa ou e-Mola. A mensalidade de 1.500 MT só começa no mês em que a loja entra no ar. A partir daqui o trabalho é nosso.',
+    tag: '20.000 MT',
   },
   {
     n: '3',
@@ -302,6 +305,16 @@ const INCLUDED = [
   'Formação de 45 minutos + suporte de arranque',
 ];
 
+/** O que os 1.500 MT/mês pagam — tem de ser tão claro como o preço. */
+const MONTHLY_INCLUDES = [
+  'Alojamento da loja e da base de dados',
+  'Cópias de segurança dos seus dados',
+  'Certificado de segurança sempre válido',
+  'Atualizações do sistema sem custo',
+  'Suporte por WhatsApp em dias úteis',
+  'Avarias corrigidas sem orçamento à parte',
+];
+
 const NOT_INCLUDED = [
   {
     t: 'Domínio próprio',
@@ -327,8 +340,12 @@ const FAQ = [
     a: 'Não. Se sabe usar o WhatsApp e o Instagram, sabe usar o painel. Tudo funciona no telemóvel, em português, e ensinamos numa sessão de 45 minutos. Adicionar um produto leva menos tempo do que publicar um story.',
   },
   {
-    q: 'Os 5.000 MT são mesmo pagamento único?',
-    a: 'Sim — é o valor da implementação completa. Não cobramos mensalidade pelo sistema. Os únicos custos que continuam são de terceiros: o domínio (uma vez por ano) e a comissão da operadora se optar pelo pagamento automático. Está tudo listado acima, sem letras pequenas.',
+    q: 'Como funciona o preço: 20.000 MT e depois 1.500 MT por mês?',
+    a: 'Os 20.000 MT são a implementação completa — paga-se uma vez, no início. Os 1.500 MT por mês pagam o que mantém a loja no ar: alojamento, cópias de segurança, certificado de segurança, atualizações do sistema e suporte. Não cobramos comissão sobre as suas vendas. Fora disto só há custos de terceiros: o domínio (uma vez por ano, pago ao registador) e a comissão da operadora se optar pelo pagamento automático. Está tudo listado acima, sem letras pequenas.',
+  },
+  {
+    q: 'E se eu deixar de pagar a mensalidade?',
+    a: 'A loja fica suspensa, não apagada. O catálogo, os pedidos e os dados dos seus clientes ficam guardados e voltam como estavam quando retomar. O domínio é seu e continua em seu nome. Avisamos sempre antes de suspender — nunca desligamos uma loja sem falar consigo.',
   },
   {
     q: 'O dinheiro das vendas passa por vocês?',
@@ -364,12 +381,36 @@ const FAQ = [
   },
 ];
 
+const FUTURE_SCENARIO = [
+  {
+    icon: 'phone' as IconName,
+    t: 'Daqui a 1 mês',
+    d: 'A loja já está no ar com o seu nome. Quem vê o seu Instagram ou o seu status de WhatsApp já não manda mensagem a perguntar preço — abre o link, vê tudo sozinho e decide.',
+  },
+  {
+    icon: 'bag' as IconName,
+    t: 'Daqui a 2 meses',
+    d: 'Os clientes já conhecem o caminho: entram, veem os produtos com fotos e vídeo, colocam no carrinho e pagam por M-Pesa em poucos cliques — sem precisar de si para nada disso.',
+  },
+  {
+    icon: 'chart' as IconName,
+    t: 'Daqui a 3 meses',
+    d: 'Enquanto dorme, chegam pedidos com pagamento já confirmado. De manhã abre o painel e já há vendas à sua espera — sem ter respondido a uma única mensagem durante a noite.',
+  },
+  {
+    icon: 'target' as IconName,
+    t: 'A partir daqui',
+    d: 'Já sabe qual produto vende mais, a que horas as pessoas compram e de onde vêm os seus clientes. Cada decisão passa a ser com números na mão, não com palpite.',
+  },
+];
+
 const GUARANTEES = [
   'M-Pesa e e-Mola',
-  'Pagamento único de 5.000 MT',
+  'Implementação de 20.000 MT',
   'Pronta em 48–72h',
   'Você mesmo gere tudo',
-  'Sem mensalidade à Niraslab',
+  'Mensalidade de 1.500 MT',
+  'Sem comissão nas suas vendas',
   'Formação incluída',
   'Domínio em seu nome',
   'Feita em Moçambique',
@@ -525,25 +566,40 @@ export default function LandingPage() {
                 , entregas por zona, promoções, vídeo nos produtos e um painel que você controla do telemóvel.
                 <br />
                 <span className="font-semibold" style={{ color: 'var(--lp-ink)' }}>
-                  Montamos tudo por si. Uma vez.
+                  Montamos tudo por si. Você só vende.
                 </span>
               </p>
             </Reveal>
 
             <Reveal delay={120}>
               <div
-                className="mt-8 inline-flex flex-wrap items-end gap-x-4 gap-y-1 rounded-2xl border bg-white px-5 py-4"
+                className="mt-8 inline-block rounded-2xl border bg-white px-5 py-4"
                 style={{ borderColor: 'rgba(2,132,199,.24)', boxShadow: 'var(--lp-sh-2)' }}
               >
-                <span
-                  className="text-[clamp(2.4rem,6.4vw,3.2rem)] font-extrabold leading-none tracking-[-0.035em]"
-                  style={{ color: 'var(--lp-blue-deep)' }}
+                <div className="flex flex-wrap items-end gap-x-4 gap-y-1">
+                  <span
+                    className="text-[clamp(2.4rem,6.4vw,3.2rem)] font-extrabold leading-none tracking-[-0.035em]"
+                    style={{ color: 'var(--lp-blue-deep)' }}
+                  >
+                    {PRICE}
+                  </span>
+                  <span className="pb-1 text-sm" style={{ color: 'var(--lp-mute)' }}>
+                    {PRICE_NOTE}
+                  </span>
+                </div>
+                <div
+                  className="mt-3 flex flex-wrap items-baseline gap-x-2 gap-y-1 border-t pt-3 text-sm"
+                  style={{ borderColor: 'rgba(2,132,199,.16)' }}
                 >
-                  {PRICE}
-                </span>
-                <span className="pb-1 text-sm" style={{ color: 'var(--lp-mute)' }}>
-                  {PRICE_NOTE}
-                </span>
+                  <span className="font-bold" style={{ color: 'var(--lp-ink)' }}>
+                    + {MONTHLY}
+                  </span>
+                  <span style={{ color: 'var(--lp-mute)' }}>{MONTHLY_NOTE}</span>
+                </div>
+                <p className="mt-3 flex items-center gap-1.5 text-[13px] font-semibold" style={{ color: 'var(--lp-coral)' }}>
+                  <Icon name="zap" className="h-3.5 w-3.5" strokeWidth={2.6} />
+                  {PRICE_URGENCY}
+                </p>
               </div>
             </Reveal>
 
@@ -719,6 +775,57 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ─── DAQUI A UNS MESES ────────────────────────────────────────── */}
+      <section className="px-5 py-24 md:py-32">
+        <div className="mx-auto max-w-6xl">
+          <Reveal>
+            <Kicker>Onde vai estar</Kicker>
+            <H2>
+              O que paga hoje é a montagem.
+              <br />O que ganha depois não tem preço fixo.
+            </H2>
+            <Lead>
+              Os 20.000 MT são o valor de agora, para arrancar já. O que constrói a partir daqui é um negócio que vende
+              sozinho, todos os dias, com ou sem si a olhar para o telemóvel.
+            </Lead>
+          </Reveal>
+
+          <div
+            className="mt-14 grid gap-px overflow-hidden rounded-3xl border sm:grid-cols-2"
+            style={{ borderColor: 'var(--lp-line)', background: 'var(--lp-line)', boxShadow: 'var(--lp-sh-1)' }}
+          >
+            {FUTURE_SCENARIO.map((s, i) => (
+              <Reveal key={s.t} delay={i * 80}>
+                <div className="h-full bg-white p-7 md:p-8">
+                  <span
+                    className="mb-4 grid h-11 w-11 place-items-center rounded-xl text-white"
+                    style={{ background: 'linear-gradient(135deg,#0ea5e9,#0369a1)', boxShadow: '0 8px 20px -10px rgba(2,132,199,.75)' }}
+                  >
+                    <Icon name={s.icon} className="h-5 w-5" />
+                  </span>
+                  <h3 className="text-[17px] font-bold tracking-[-0.01em]">{s.t}</h3>
+                  <p className="mt-2 text-[15px] leading-relaxed" style={{ color: 'var(--lp-dim)' }}>
+                    {s.d}
+                  </p>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+
+          <Reveal delay={120}>
+            <div
+              className="mt-10 flex flex-col items-start justify-between gap-5 rounded-3xl border p-7 sm:flex-row sm:items-center"
+              style={{ borderColor: 'rgba(2,132,199,.24)', background: 'rgba(2,132,199,.05)' }}
+            >
+              <p className="max-w-xl text-[15px] font-semibold leading-relaxed" style={{ color: 'var(--lp-ink)' }}>
+                O preço de {PRICE} é o valor de hoje. Quem começa agora está pronto antes — e vende antes.
+              </p>
+              <CtaPrimary>Começar agora</CtaPrimary>
+            </div>
+          </Reveal>
+        </div>
+      </section>
+
       {/* ─── TUDO INCLUÍDO ────────────────────────────────────────────── */}
       <section id="tudo-incluido" className="scroll-mt-20 px-5 py-24 md:py-32">
         <div className="mx-auto max-w-6xl">
@@ -786,7 +893,12 @@ export default function LandingPage() {
           {[
             { v: 72, s: 'h', l: 'para a loja estar no ar', sub: 'depois de recebermos o material' },
             { v: 100, s: '%', l: 'do controlo é seu', sub: 'produtos, preços e promoções sem depender de nós' },
-            { v: 0, s: ' MT', l: 'de mensalidade à Niraslab', sub: 'paga a implementação uma vez' },
+            {
+              v: 1500,
+              s: ' MT',
+              l: 'de mensalidade, tudo incluído',
+              sub: 'alojamento, atualizações e suporte · sem comissão nas suas vendas',
+            },
           ].map((n, i) => (
             <Reveal key={n.l} delay={i * 100}>
               <p
@@ -861,7 +973,7 @@ export default function LandingPage() {
           <Reveal>
             <div className="text-center">
               <Kicker>Investimento</Kicker>
-              <H2>Uma vez. E a loja é sua.</H2>
+              <H2>O preço, à frente e por escrito.</H2>
             </div>
           </Reveal>
 
@@ -891,7 +1003,14 @@ export default function LandingPage() {
                   </span>
                 </div>
                 <p className="relative mt-3 text-[15px]" style={{ color: 'var(--lp-dim)' }}>
-                  Paga por M-Pesa ou e-Mola. Sem mensalidade nossa, sem comissão sobre as suas vendas.
+                  Paga por M-Pesa ou e-Mola. Sem comissão sobre as suas vendas — o dinheiro cai direto na sua conta.
+                </p>
+                <p
+                  className="relative mt-3 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[13px] font-bold"
+                  style={{ color: 'var(--lp-coral)', background: 'var(--lp-coral-soft)' }}
+                >
+                  <Icon name="zap" className="h-3.5 w-3.5" strokeWidth={2.6} />
+                  {PRICE_URGENCY}
                 </p>
 
                 <ul className="relative mt-8 grid gap-3 sm:grid-cols-2">
@@ -906,6 +1025,34 @@ export default function LandingPage() {
                     </li>
                   ))}
                 </ul>
+
+                <div
+                  className="relative mt-8 rounded-2xl border p-5"
+                  style={{ borderColor: 'rgba(2,132,199,.22)', background: 'rgba(2,132,199,.045)' }}
+                >
+                  <div className="flex flex-wrap items-end gap-x-3 gap-y-1">
+                    <span
+                      className="text-[clamp(1.7rem,5vw,2.2rem)] font-extrabold leading-none tracking-[-0.035em]"
+                      style={{ color: 'var(--lp-blue-deep)' }}
+                    >
+                      + {MONTHLY}
+                    </span>
+                    <span className="pb-0.5 text-[15px]" style={{ color: 'var(--lp-dim)' }}>
+                      por mês, a partir do mês em que a loja abre
+                    </span>
+                  </div>
+                  <p className="mt-3 text-[14px] font-bold tracking-[-0.01em]">A mensalidade paga:</p>
+                  <ul className="mt-2.5 grid gap-2 sm:grid-cols-2">
+                    {MONTHLY_INCLUDES.map((item) => (
+                      <li key={item} className="flex gap-2 text-[14px]">
+                        <span className="mt-0.5 shrink-0" style={{ color: 'var(--lp-blue)' }}>
+                          <Icon name="check" className="h-4 w-4" strokeWidth={2.6} />
+                        </span>
+                        <span style={{ color: 'var(--lp-dim)' }}>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
 
                 <div className="relative mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
                   <CtaPrimary className="w-full sm:w-auto">Reservar a minha loja</CtaPrimary>
@@ -1044,7 +1191,7 @@ export default function LandingPage() {
       </footer>
 
       <div className="h-20 md:hidden" />
-      <StickyCta href={WA} price={PRICE} />
+      <StickyCta href={WA} price={PRICE} monthly={MONTHLY} />
     </main>
   );
 }
